@@ -75,6 +75,7 @@ type Household = {
 
 const STORAGE_EXPENSES = "cashflow-expenses-v1";
 const STORAGE_INCOMES = "cashflow-incomes-v1";
+const STORAGE_LIMITS = "cashflow-limits-v1";
 
 const TXT = {
   tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
@@ -104,6 +105,7 @@ const TXT = {
   dateTo: "\u0414\u043e",
   clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
   categoryLimits: "\u041b\u0456\u043c\u0456\u0442\u0438 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0439",
+  limit: "\u041b\u0456\u043c\u0456\u0442",
   delete: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
   author: "\u0410\u0432\u0442\u043e\u0440",
   unknownUser: "\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u043e\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447",
@@ -183,7 +185,7 @@ const incomeCategoryLabelMap: Record<IncomeCategoryId, string> = {
   other: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438",
 };
 
-const categoryLimits: Record<CategoryId, number> = {
+const defaultCategoryLimits: Record<CategoryId, number> = {
   groceries: 10000,
   transport: 3000,
   entertainment: 2500,
@@ -229,6 +231,7 @@ const formatPlain = (value: number) => value.toString().replace(/\B(?=(\d{3})+(?
 
 const storageKeyExpenses = (scopeKey: string) => `${STORAGE_EXPENSES}:${scopeKey}`;
 const storageKeyIncomes = (scopeKey: string) => `${STORAGE_INCOMES}:${scopeKey}`;
+const storageKeyLimits = (scopeKey: string) => `${STORAGE_LIMITS}:${scopeKey}`;
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<AppTab>("home");
@@ -238,6 +241,7 @@ export default function Home() {
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [incomeForm, setIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [filters, setFilters] = useState<ExpenseFilters>(defaultFilters);
+  const [categoryLimits, setCategoryLimits] = useState<Record<CategoryId, number>>(defaultCategoryLimits);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [activeScopeKey, setActiveScopeKey] = useState("personal");
   const { data: session, status } = useSession();
@@ -279,19 +283,25 @@ export default function Home() {
     if (!mounted) return;
     const keyExp = storageKeyExpenses(activeScopeKey);
     const keyInc = storageKeyIncomes(activeScopeKey);
+    const keyLim = storageKeyLimits(activeScopeKey);
 
     try {
       const rawExp = localStorage.getItem(keyExp);
       const rawInc = localStorage.getItem(keyInc);
+      const rawLim = localStorage.getItem(keyLim);
 
       if (rawExp) setExpenses(JSON.parse(rawExp) as Expense[]);
       else setExpenses(activeScopeKey === "personal" ? initialExpenses : []);
 
       if (rawInc) setIncomes(JSON.parse(rawInc) as Income[]);
       else setIncomes(activeScopeKey === "personal" ? initialIncomes : []);
+
+      if (rawLim) setCategoryLimits({ ...defaultCategoryLimits, ...(JSON.parse(rawLim) as Record<CategoryId, number>) });
+      else setCategoryLimits(defaultCategoryLimits);
     } catch {
       setExpenses(activeScopeKey === "personal" ? initialExpenses : []);
       setIncomes(activeScopeKey === "personal" ? initialIncomes : []);
+      setCategoryLimits(defaultCategoryLimits);
     }
   }, [mounted, activeScopeKey]);
 
@@ -299,7 +309,8 @@ export default function Home() {
     if (!mounted) return;
     localStorage.setItem(storageKeyExpenses(activeScopeKey), JSON.stringify(expenses));
     localStorage.setItem(storageKeyIncomes(activeScopeKey), JSON.stringify(incomes));
-  }, [expenses, incomes, mounted, activeScopeKey]);
+    localStorage.setItem(storageKeyLimits(activeScopeKey), JSON.stringify(categoryLimits));
+  }, [expenses, incomes, categoryLimits, mounted, activeScopeKey]);
 
   const formatCurrency = (value: number) => mounted ? currency.format(value) : `${formatPlain(value)} ${TXT.uah}`;
 
@@ -341,10 +352,10 @@ export default function Home() {
     return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
       const limit = categoryLimits[category];
       const spent = totals[category];
-      const progress = Math.min(100, Math.round((spent / limit) * 100));
+      const progress = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
       return { category, spent, limit, progress };
     });
-  }, [filteredExpenses]);
+  }, [filteredExpenses, categoryLimits]);
 
   const handleAddExpense = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -386,6 +397,11 @@ export default function Home() {
 
   const handleDeleteExpense = (id: string) => setExpenses((prev) => prev.filter((expense) => expense.id !== id));
   const handleDeleteIncome = (id: string) => setIncomes((prev) => prev.filter((income) => income.id !== id));
+  const handleCategoryLimitChange = (category: CategoryId, rawValue: string) => {
+    const digitsOnly = rawValue.replace(/[^\d]/g, "");
+    const nextValue = digitsOnly === "" ? 0 : Number(digitsOnly);
+    setCategoryLimits((prev) => ({ ...prev, [category]: nextValue }));
+  };
 
   if (status === "loading") return <main className="auth-shell"><div className="auth-card"><h1>Checking session...</h1></div></main>;
   if (!session?.user) return <main className="auth-shell"><div className="auth-card"><h1>Authentication required</h1><p>Please sign in or create an account to continue.</p><a className="button button-primary" href="/sign-in">Sign in</a><a className="button button-secondary" href="/sign-up">Sign up</a></div></main>;
@@ -477,6 +493,16 @@ export default function Home() {
               {limitsByCategory.map((budget) => (
                 <div className="budget-card" key={budget.category}>
                   <div className="budget-copy"><strong>{categoryLabelMap[budget.category]}</strong><span>{formatPlain(budget.spent)} / {formatPlain(budget.limit)} {TXT.uah}</span></div>
+                  <label className="budget-input">
+                    <span>{TXT.limit}</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={categoryLimits[budget.category]}
+                      onChange={(event) => handleCategoryLimitChange(budget.category, event.target.value)}
+                    />
+                  </label>
                   <div className="budget-bar"><div style={{ width: `${budget.progress}%` }} /></div>
                 </div>
               ))}
