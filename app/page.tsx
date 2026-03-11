@@ -17,6 +17,7 @@ type Expense = {
   category: CategoryId;
   amount: number;
   date: string;
+  createdByName?: string;
 };
 
 type Income = {
@@ -26,6 +27,7 @@ type Income = {
   category: IncomeCategoryId;
   amount: number;
   date: string;
+  createdByName?: string;
 };
 
 type ExpenseForm = {
@@ -80,6 +82,8 @@ const TXT = {
   clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
   categoryLimits: "\u041b\u0456\u043c\u0456\u0442\u0438 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0439",
   delete: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
+  author: "\u0410\u0432\u0442\u043e\u0440",
+  unknownUser: "\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u043e\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447",
   incomeTitle: "\u0414\u043e\u0445\u043e\u0434\u0438",
   addIncome: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0434\u043e\u0445\u0456\u0434",
   incomeType: "\u0422\u0438\u043f \u0434\u043e\u0445\u043e\u0434\u0443",
@@ -173,6 +177,7 @@ export default function Home() {
   const [incomeForm, setIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [filters, setFilters] = useState<ExpenseFilters>(defaultFilters);
   const { data: session, status } = useSession();
+  const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -260,6 +265,7 @@ export default function Home() {
       category: expenseForm.category,
       amount: amountValue,
       date: expenseForm.date,
+      createdByName: currentUserName,
     };
 
     setExpenses((prev) => [next, ...prev]);
@@ -279,6 +285,7 @@ export default function Home() {
       category: incomeForm.category,
       amount: amountValue,
       date: incomeForm.date,
+      createdByName: currentUserName,
     };
 
     setIncomes((prev) => [next, ...prev]);
@@ -319,7 +326,7 @@ export default function Home() {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <span>User: {session.user.email}</span>
+        <span>{currentUserName}</span>
         <button className="row-action" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Sign out</button>
       </header>
       <nav className="tab-nav" aria-label="Primary">
@@ -426,7 +433,7 @@ export default function Home() {
                   <div className="expense-row" key={expense.id}>
                     <div>
                       <strong>{expense.name}</strong>
-                      <p>{categoryLabelMap[expense.category]}</p>
+                      <p>{categoryLabelMap[expense.category]} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p>
                     </div>
                     <span>{mounted ? formatDate(expense.date) : expense.date}</span>
                     <strong>-{formatCurrency(expense.amount)}</strong>
@@ -512,7 +519,7 @@ export default function Home() {
                   <div className="income-row" key={income.id}>
                     <div>
                       <strong>{income.name}</strong>
-                      <p>{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]}</p>
+                      <p>{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p>
                     </div>
                     <span>{mounted ? formatDate(income.date) : income.date}</span>
                     <strong>+{formatCurrency(income.amount)}</strong>
@@ -533,6 +540,14 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
 
 
 
