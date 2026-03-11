@@ -1,9 +1,9 @@
-import type { Metadata, Viewport } from "next";
-import { Manrope } from "next/font/google";
+﻿import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
-const manrope = Manrope({ subsets: ["latin", "cyrillic"], variable: "--font-manrope" });
+const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", weight: ["400", "500", "600", "700"] });
 
 export const metadata: Metadata = {
   title: "Cashflow Compass",
@@ -22,8 +22,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#f7efe4",
-  colorScheme: "light",
+  themeColor: "#0b1220",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -33,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk">
-      <body className={manrope.variable}>
+      <body className={inter.variable}>
         <Providers>{children}</Providers>
       </body>
     </html>
