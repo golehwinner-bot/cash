@@ -12,6 +12,16 @@ type Expense = {
   date: string;
 };
 
+type ExpenseForm = {
+  name: string;
+  category: CategoryId;
+  amount: string;
+  date: string;
+};
+
+const STORAGE_EXPENSES = "cashflow-expenses-v1";
+const STORAGE_BUDGET = "cashflow-budget-v1";
+
 const categories: Array<{ id: CategoryId; label: string }> = [
   { id: "groceries", label: "Продукти" },
   { id: "transport", label: "Транспорт" },
@@ -43,6 +53,13 @@ const initialExpenses: Expense[] = [
   { id: "4", name: "Coffee Lab", category: "coffee", amount: 145, date: "2026-03-09" },
 ];
 
+const defaultForm = (): ExpenseForm => ({
+  name: "",
+  category: categories[0].id,
+  amount: "",
+  date: "",
+});
+
 const currency = new Intl.NumberFormat("uk-UA", {
   style: "currency",
   currency: "UAH",
@@ -60,18 +77,51 @@ export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [monthlyBudget, setMonthlyBudget] = useState(30000);
   const [mounted, setMounted] = useState(false);
-  const [form, setForm] = useState({
-    name: "",
-    category: categories[0].id,
-    amount: "",
-    date: "",
-  });
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [form, setForm] = useState<ExpenseForm>(defaultForm);
 
   useEffect(() => {
     const today = new Date();
+    const fallbackDate = today.toISOString().slice(0, 10);
+
+    setForm((prev) => ({ ...prev, date: prev.date || fallbackDate }));
+
+    try {
+      const rawExpenses = localStorage.getItem(STORAGE_EXPENSES);
+      const rawBudget = localStorage.getItem(STORAGE_BUDGET);
+
+      if (rawExpenses) {
+        const parsed = JSON.parse(rawExpenses) as Expense[];
+        if (Array.isArray(parsed)) {
+          setExpenses(parsed);
+        }
+      }
+
+      if (rawBudget) {
+        const parsedBudget = Number(rawBudget);
+        if (Number.isFinite(parsedBudget) && parsedBudget >= 0) {
+          setMonthlyBudget(parsedBudget);
+        }
+      }
+    } catch {
+      // Ignore broken localStorage values and keep defaults.
+    }
+
     setMounted(true);
-    setForm((prev) => (prev.date ? prev : { ...prev, date: today.toISOString().slice(0, 10) }));
   }, []);
+
+  useEffect(() => {
+    if (!mounted) {
+      return;
+    }
+
+    try {
+      localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(expenses));
+      localStorage.setItem(STORAGE_BUDGET, String(monthlyBudget));
+    } catch {
+      // Ignore storage write errors (private mode / quota / disabled storage).
+    }
+  }, [expenses, monthlyBudget, mounted]);
 
   const formatCurrency = (value: number) =>
     mounted ? currency.format(value) : `${formatPlain(value)} грн`;
@@ -106,11 +156,52 @@ export default function Home() {
     });
   }, [expenses]);
 
+  const resetForm = () => {
+    const today = new Date().toISOString().slice(0, 10);
+    setForm({ ...defaultForm(), date: today });
+    setEditingExpenseId(null);
+  };
+
+  const startEdit = (expense: Expense) => {
+    setEditingExpenseId(expense.id);
+    setForm({
+      name: expense.name,
+      category: expense.category,
+      amount: String(expense.amount),
+      date: expense.date,
+    });
+  };
+
+  const handleDelete = (expenseId: string) => {
+    setExpenses((prev) => prev.filter((expense) => expense.id !== expenseId));
+    if (editingExpenseId === expenseId) {
+      resetForm();
+    }
+  };
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const amountValue = Number(form.amount);
     if (!form.name.trim() || !form.category || !form.date || !amountValue || amountValue <= 0) {
+      return;
+    }
+
+    if (editingExpenseId) {
+      setExpenses((prev) =>
+        prev.map((expense) =>
+          expense.id === editingExpenseId
+            ? {
+                ...expense,
+                name: form.name.trim(),
+                category: form.category,
+                amount: amountValue,
+                date: form.date,
+              }
+            : expense,
+        ),
+      );
+      resetForm();
       return;
     }
 
@@ -132,8 +223,12 @@ export default function Home() {
         <div className="hero-copy">
           <p className="eyebrow">Cashflow Compass</p>
           <div className="hero-actions">
-            <button className="button button-primary">Додати витрату</button>
-            <button className="button button-secondary">Переглянути аналітику</button>
+            <button className="button button-primary" type="button">
+              Додати витрату
+            </button>
+            <button className="button button-secondary" type="button">
+              Переглянути аналітику
+            </button>
           </div>
           <div className="budget-control">
             <label htmlFor="monthlyBudget">Бюджет на місяць</label>
@@ -157,8 +252,8 @@ export default function Home() {
           <article className="panel">
             <div className="panel-head">
               <div>
-                <p className="section-label">Додати витрату</p>
-                <h2>Швидкий запис</h2>
+                <p className="section-label">{editingExpenseId ? "Редагувати витрату" : "Додати витрату"}</p>
+                <h2>{editingExpenseId ? "Оновлення запису" : "Швидкий запис"}</h2>
               </div>
             </div>
 
@@ -213,9 +308,16 @@ export default function Home() {
                 />
               </label>
 
-              <button className="button button-primary" type="submit">
-                Зберегти
-              </button>
+              <div className="form-actions">
+                <button className="button button-primary" type="submit">
+                  {editingExpenseId ? "Оновити" : "Зберегти"}
+                </button>
+                {editingExpenseId ? (
+                  <button className="button button-secondary" type="button" onClick={resetForm}>
+                    Скасувати
+                  </button>
+                ) : null}
+              </div>
             </form>
           </article>
 
@@ -225,7 +327,9 @@ export default function Home() {
                 <p className="section-label">Останні витрати</p>
                 <h2>Стрічка транзакцій</h2>
               </div>
-              <button className="text-button">Усі записи</button>
+              <button className="text-button" type="button">
+                Усі записи
+              </button>
             </div>
 
             <div className="expense-table">
@@ -237,6 +341,18 @@ export default function Home() {
                   </div>
                   <span>{formatDateSafe(expense.date)}</span>
                   <strong>-{formatCurrency(expense.amount)}</strong>
+                  <div className="row-actions">
+                    <button className="row-action" type="button" onClick={() => startEdit(expense)}>
+                      Редагувати
+                    </button>
+                    <button
+                      className="row-action row-action-danger"
+                      type="button"
+                      onClick={() => handleDelete(expense.id)}
+                    >
+                      Видалити
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -268,6 +384,12 @@ export default function Home() {
           </div>
         </article>
       </section>
+
+      {expenses.length === 0 ? (
+        <section className="empty-state">
+          <p>Поки що немає витрат. Додай першу транзакцію вище.</p>
+        </section>
+      ) : null}
     </main>
   );
 }
