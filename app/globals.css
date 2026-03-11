@@ -168,14 +168,24 @@ select {
 
 .expense-form input,
 .expense-form select,
+.income-form input,
+.income-form select,
 .filters-grid input,
 .filters-grid select,
 .budget-input input {
   border-radius: 12px;
   border: 1px solid var(--line);
   padding: 10px 12px;
-  background: rgba(27, 29, 28, 0.94);
+  background: rgba(46, 50, 48, 0.92);
+  color: var(--text);
   outline: none;
+}
+
+.expense-form input::placeholder,
+.income-form input::placeholder,
+.filters-grid input::placeholder,
+.budget-input input::placeholder {
+  color: #bfd8c7;
 }
 
 .filters-card {
@@ -448,7 +458,8 @@ select {
   border-radius: 10px;
   border: 1px solid var(--line);
   padding: 8px 10px;
-  background: rgba(27, 29, 28, 0.94);
+  background: rgba(46, 50, 48, 0.92);
+  color: var(--text);
 }
 
 .invite-actions {
@@ -479,7 +490,8 @@ select {
   border-radius: 10px;
   border: 1px solid var(--line);
   padding: 10px 12px;
-  background: rgba(27, 29, 28, 0.94);
+  background: rgba(46, 50, 48, 0.92);
+  color: var(--text);
 }
 
 .room-balance-wrap {
@@ -512,4 +524,9 @@ select {
   .scope-grid {
     grid-template-columns: 1fr;
   }
+}
+
+select option {
+  background: #2e3230;
+  color: var(--text);
 }
