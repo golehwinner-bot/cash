@@ -201,17 +201,9 @@ const defaultCategoryLimits: Record<CategoryId, number> = {
   other: 1500,
 };
 
-const initialExpenses: Expense[] = [
-  { id: "1", name: "\u0421\u0456\u043b\u044c\u043f\u043e", category: "groceries", source: "card", amount: 1240, date: "2026-03-10" },
-  { id: "2", name: "Bolt", category: "transport", source: "card", amount: 186, date: "2026-03-10" },
-  { id: "3", name: "Monobank", category: "subscriptions", source: "card", amount: 219, date: "2026-03-09" },
-  { id: "4", name: "Coffee Lab", category: "entertainment", source: "cash", amount: 145, date: "2026-03-09" },
-];
+const initialExpenses: Expense[] = [];
 
-const initialIncomes: Income[] = [
-  { id: "i1", name: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430", type: "card", category: "salary", amount: 42000, date: "2026-03-01" },
-  { id: "i2", name: "\u0424\u0440\u0456\u043b\u0430\u043d\u0441", type: "cash", category: "part_time", amount: 8500, date: "2026-03-05" },
-];
+const initialIncomes: Income[] = [];
 
 const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, source: expenseSources[0].id, amount: "", date: "" });
 const defaultIncomeForm = (): IncomeForm => ({ name: "", type: incomeTypes[0].id, category: incomeCategories[0].id, amount: "", date: "" });
