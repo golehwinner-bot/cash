@@ -6,7 +6,7 @@ import { HouseholdMembersPanel } from "./components/household-members-panel";
 
 type CategoryId = "groceries" | "transport" | "entertainment" | "subscriptions" | "coffee";
 type FilterCategoryId = CategoryId | "all";
-type AppTab = "home" | "expenses" | "income" | "settings";
+type AppTab = "home" | "expenses" | "income" | "room";
 
 type IncomeTypeId = "cash" | "card";
 type IncomeCategoryId = "salary" | "part_time" | "other";
@@ -58,7 +58,7 @@ const TXT = {
   tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
   tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
   tabIncome: "\u0414\u043e\u0445\u0456\u0434",
-  tabSettings: "\u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f",
+  tabRoom: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
   balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
   totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
   cashBalance: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
@@ -333,7 +333,7 @@ export default function Home() {
         <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
         <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
         <button className={`tab-btn ${activeTab === "income" ? "active" : ""}`} onClick={() => setActiveTab("income")} type="button">{TXT.tabIncome}</button>
-        <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button">{TXT.tabSettings}</button>
+        <button className={`tab-btn ${activeTab === "room" ? "active" : ""}`} onClick={() => setActiveTab("room")} type="button">{TXT.tabRoom}</button>
       </nav>
 
       {activeTab === "home" ? (
@@ -532,7 +532,7 @@ export default function Home() {
         </section>
       ) : null}
 
-      {activeTab === "settings" ? (
+      {activeTab === "room" ? (
         <section className="tab-page single">
           <HouseholdMembersPanel />
         </section>
@@ -540,6 +540,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 

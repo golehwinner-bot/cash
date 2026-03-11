@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
@@ -8,7 +8,6 @@ export async function POST(request: Request) {
     const name = String(body.name ?? "").trim();
     const email = String(body.email ?? "").trim().toLowerCase();
     const password = String(body.password ?? "");
-    const householdName = String(body.householdName ?? "").trim();
 
     if (!email || !password || password.length < 6) {
       return NextResponse.json({ error: "Invalid registration data." }, { status: 400 });
@@ -21,36 +20,15 @@ export async function POST(request: Request) {
 
     const passwordHash = await hash(password, 10);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.create({
-        data: {
-          name: name || null,
-          email,
-          passwordHash,
-        },
-      });
-
-      const household = await tx.household.create({
-        data: {
-          name: householdName || `Family of ${name || email}`,
-        },
-      });
-
-      await tx.householdMember.create({
-        data: {
-          role: "OWNER",
-          userId: user.id,
-          householdId: household.id,
-        },
-      });
-
-      return { user, household };
+    const user = await prisma.user.create({
+      data: {
+        name: name || null,
+        email,
+        passwordHash,
+      },
     });
 
-    return NextResponse.json({
-      userId: result.user.id,
-      householdId: result.household.id,
-    });
+    return NextResponse.json({ userId: user.id }, { status: 201 });
   } catch (error) {
     console.error("Register error:", error);
 
