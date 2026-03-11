@@ -1,8 +1,8 @@
 # Cashflow Compass
 
-���������� ��� ����� ������/������ � ������� ��� ������� �������.
+Expense and income tracker with a foundation for family budgets.
 
-## ����
+## Stack
 
 - Next.js 15
 - React 19
@@ -10,45 +10,39 @@
 - Prisma + PostgreSQL
 - NextAuth (Credentials)
 
-## ������� �����
+## Local setup
 
 ```bash
 npm install
 ```
 
-1. ������ `.env` �� ����� `.env.example`.
-2. �������� `DATABASE_URL` �� PostgreSQL.
-3. ������� ����� ��:
+1. Create `.env` from `.env.example`.
+2. Fill these variables:
+- `DATABASE_URL`
+- `NEXTAUTH_SECRET`
+- `NEXTAUTH_URL=http://localhost:3000`
+
+3. Prepare database:
 
 ```bash
 npm run db:generate
 npm run db:push
 ```
 
-4. ������� ����������:
+4. Run app:
 
 ```bash
 npm run dev
 ```
 
-## �� ��� ����������
+## Auth and households
 
-- �������: ������� / ������� / ����� / ������������
-- ��������� ���� ������ �� ������
-- Գ����� ������ � ���� ��������
-- ��������� �� ���� ������������
-- ����� API ��� household (������� ����)
+- `POST /api/auth/register` � create user + initial household
+- `GET /api/households` � list user households
+- `POST /api/households` � create household
+- `POST /api/households/:id/members` � add/update household member role
 
-## ������ API
+## Security notes
 
-- `POST /api/auth/register` � ��������� + ��������� household
-- `GET /api/households` � ������ household ��������� �����������
-- `POST /api/households` � ��������� household
-- `POST /api/households/:id/members` � ���������/��������� ��� ��������
-
-## ������� �����
-
-1. ��������� ���������� �� ��������� household � UI/API.
-2. ������ ��������� ��������� household.
-3. ������ ���������� � household ����� email-flow.
-4. ������ RBAC-�������� �� CRUD �������� ������/������.
+- Never commit real secrets to `.env.example`.
+- Keep production values only in Vercel Environment Variables.

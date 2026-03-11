@@ -299,7 +299,7 @@ export default function Home() {
     return (
       <main className="auth-shell">
         <div className="auth-card">
-          <h1>Р СџР ВµРЎР‚Р ВµР Р†РЎвЂ“РЎР‚РЎРЏРЎвЂќР СР С• РЎРѓР ВµРЎРѓРЎвЂ“РЎР‹...</h1>
+          <h1>Checking session...</h1>
         </div>
       </main>
     );
@@ -309,10 +309,10 @@ export default function Home() {
     return (
       <main className="auth-shell">
         <div className="auth-card">
-          <h1>Р СџР С•РЎвЂљРЎР‚РЎвЂ“Р В±Р Р…Р В° Р В°Р Р†РЎвЂљР С•РЎР‚Р С‘Р В·Р В°РЎвЂ РЎвЂ“РЎРЏ</h1>
-          <p>Р В©Р С•Р В± Р С—РЎР‚Р В°РЎвЂ РЎР‹Р Р†Р В°РЎвЂљР С‘ Р В· РЎРѓРЎвЂ“Р СР ВµР в„–Р Р…Р С‘Р С Р В±РЎР‹Р Т‘Р В¶Р ВµРЎвЂљР С•Р С, РЎС“Р Р†РЎвЂ“Р в„–Р Т‘Р С‘ Р Р† Р В°Р С”Р В°РЎС“Р Р…РЎвЂљ Р В°Р В±Р С• РЎРѓРЎвЂљР Р†Р С•РЎР‚Р С‘ Р Р…Р С•Р Р†Р С‘Р в„–.</p>
-          <a className="button button-primary" href="/sign-in">Р Р€Р Р†РЎвЂ“Р в„–РЎвЂљР С‘</a>
-          <a className="button button-secondary" href="/sign-up">Р В Р ВµРЎвЂќРЎРѓРЎвЂљРЎР‚Р В°РЎвЂ РЎвЂ“РЎРЏ</a>
+          <h1>Authentication required</h1>
+          <p>Please sign in or create an account to continue.</p>
+          <a className="button button-primary" href="/sign-in">Sign in</a>
+          <a className="button button-secondary" href="/sign-up">Sign up</a>
         </div>
       </main>
     );
@@ -320,8 +320,8 @@ export default function Home() {
   return (
     <main className="app-shell">
       <header className="top-bar">
-        <span>Р С™Р С•РЎР‚Р С‘РЎРѓРЎвЂљРЎС“Р Р†Р В°РЎвЂЎ: {session.user.email}</span>
-        <button className="row-action" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Р вЂ™Р С‘Р в„–РЎвЂљР С‘</button>
+        <span>User: {session.user.email}</span>
+        <button className="row-action" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Sign out</button>
       </header>
       <nav className="tab-nav" aria-label="Primary">
         <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
