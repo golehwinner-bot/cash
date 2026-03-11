@@ -41,13 +41,16 @@ model User {
 }
 
 model Household {
-  id          String            @id @default(cuid())
-  name        String
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
-  members     HouseholdMember[]
-  expenses    Expense[]
-  incomes     Income[]
+  id                String            @id @default(cuid())
+  name              String
+  joinCode          String?           @unique
+  joinRole          HouseholdRole?
+  joinCodeExpiresAt DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  members           HouseholdMember[]
+  expenses          Expense[]
+  incomes           Income[]
 }
 
 model HouseholdMember {
@@ -136,3 +139,4 @@ model VerificationToken {
 
   @@id([identifier, token])
 }
+

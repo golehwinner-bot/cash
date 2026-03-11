@@ -426,3 +426,33 @@ select {
   margin: 0;
   color: var(--muted);
 }
+
+.invite-controls {
+  margin: 10px 0 12px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px dashed var(--line);
+  background: rgba(255, 255, 255, 0.58);
+  display: grid;
+  gap: 10px;
+}
+
+.invite-controls label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.invite-controls select {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.invite-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}

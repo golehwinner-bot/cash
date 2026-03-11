@@ -16,6 +16,14 @@ type Member = {
   role: "OWNER" | "ADMIN" | "MEMBER";
 };
 
+type JoinRole = "ADMIN" | "MEMBER";
+
+type JoinCodeState = {
+  code: string;
+  role: JoinRole;
+  expiresAt: string;
+};
+
 const TXT = {
   section: "Кімната",
   createTitle: "Створити нову кімнату",
@@ -31,9 +39,24 @@ const TXT = {
   role_MEMBER: "Учасник",
   myRole: "Моя роль",
   createError: "Не вдалося створити кімнату.",
+  inviteTitle: "Код запрошення",
+  inviteRole: "Роль для нового учасника",
+  generateCode: "Згенерувати код",
+  generatingCode: "Генеруємо...",
+  clearCode: "Скасувати код",
+  clearingCode: "Скасовуємо...",
+  code: "Код",
+  expiresAt: "Дійсний до",
+  joinTitle: "Приєднатись по коду",
+  joinCodeLabel: "6-значний код",
+  joinCodePlaceholder: "123456",
+  join: "Приєднатись",
+  joining: "Приєднуємось...",
+  joinSuccess: "Успішно приєднано до кімнати.",
+  joinError: "Не вдалося приєднатись по коду.",
 };
 
-const roleLabel = (role: Member["role"] | Household["role"]) => {
+const roleLabel = (role: Member["role"] | Household["role"] | JoinRole) => {
   if (role === "OWNER") return TXT.role_OWNER;
   if (role === "ADMIN") return TXT.role_ADMIN;
   return TXT.role_MEMBER;
@@ -42,10 +65,17 @@ const roleLabel = (role: Member["role"] | Household["role"]) => {
 export function HouseholdMembersPanel() {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [membersByHousehold, setMembersByHousehold] = useState<Record<string, Member[]>>({});
+  const [joinCodes, setJoinCodes] = useState<Record<string, JoinCodeState | null>>({});
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [error, setError] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [joinSuccess, setJoinSuccess] = useState("");
+  const [joinCodeInput, setJoinCodeInput] = useState("");
+  const [joining, setJoining] = useState(false);
+  const [busyHouseholdId, setBusyHouseholdId] = useState<string | null>(null);
+  const [roleByHousehold, setRoleByHousehold] = useState<Record<string, JoinRole>>({});
 
   const load = async () => {
     const householdsResponse = await fetch("/api/households", { cache: "no-store" });
@@ -54,6 +84,14 @@ export function HouseholdMembersPanel() {
     const householdsData = (await householdsResponse.json()) as { households: Household[] };
     const list = Array.isArray(householdsData.households) ? householdsData.households : [];
     setHouseholds(list);
+
+    setRoleByHousehold((prev) => {
+      const next = { ...prev };
+      for (const household of list) {
+        if (!next[household.id]) next[household.id] = "MEMBER";
+      }
+      return next;
+    });
 
     const entries = await Promise.all(
       list.map(async (household) => {
@@ -66,6 +104,27 @@ export function HouseholdMembersPanel() {
     );
 
     setMembersByHousehold(Object.fromEntries(entries));
+
+    const codeEntries = await Promise.all(
+      list
+        .filter((household) => household.role === "OWNER" || household.role === "ADMIN")
+        .map(async (household) => {
+          const response = await fetch(`/api/households/${household.id}/join-code`, { cache: "no-store" });
+          if (!response.ok) return [household.id, null] as const;
+
+          const data = (await response.json()) as {
+            code: string | null;
+            role: JoinRole | null;
+            expiresAt: string | null;
+          };
+
+          if (!data.code || !data.role || !data.expiresAt) return [household.id, null] as const;
+
+          return [household.id, { code: data.code, role: data.role, expiresAt: data.expiresAt }] as const;
+        }),
+    );
+
+    setJoinCodes((prev) => ({ ...prev, ...Object.fromEntries(codeEntries) }));
   };
 
   useEffect(() => {
@@ -119,6 +178,93 @@ export function HouseholdMembersPanel() {
     }
   };
 
+  const handleGenerateCode = async (householdId: string) => {
+    const selectedRole = roleByHousehold[householdId] || "MEMBER";
+
+    setBusyHouseholdId(householdId);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/households/${householdId}/join-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: selectedRole }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: "Не вдалося згенерувати код." }));
+        setError(body.error || "Не вдалося згенерувати код.");
+        return;
+      }
+
+      const data = (await response.json()) as JoinCodeState;
+      setJoinCodes((prev) => ({ ...prev, [householdId]: data }));
+    } catch {
+      setError("Не вдалося згенерувати код.");
+    } finally {
+      setBusyHouseholdId(null);
+    }
+  };
+
+  const handleClearCode = async (householdId: string) => {
+    setBusyHouseholdId(householdId);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/households/${householdId}/join-code`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: "Не вдалося скасувати код." }));
+        setError(body.error || "Не вдалося скасувати код.");
+        return;
+      }
+
+      setJoinCodes((prev) => ({ ...prev, [householdId]: null }));
+    } catch {
+      setError("Не вдалося скасувати код.");
+    } finally {
+      setBusyHouseholdId(null);
+    }
+  };
+
+  const handleJoinByCode = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    setJoinError("");
+    setJoinSuccess("");
+
+    if (!/^\d{6}$/.test(joinCodeInput.trim())) {
+      setJoinError("Код має містити 6 цифр.");
+      return;
+    }
+
+    setJoining(true);
+
+    try {
+      const response = await fetch("/api/households/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: joinCodeInput.trim() }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: TXT.joinError }));
+        setJoinError(body.error || TXT.joinError);
+        return;
+      }
+
+      setJoinCodeInput("");
+      setJoinSuccess(TXT.joinSuccess);
+      await load();
+    } catch {
+      setJoinError(TXT.joinError);
+    } finally {
+      setJoining(false);
+    }
+  };
+
   return (
     <article className="card">
       <p className="section-label">{TXT.section}</p>
@@ -141,23 +287,98 @@ export function HouseholdMembersPanel() {
             {creating ? TXT.creating : TXT.create}
           </button>
         </form>
-        {error ? <p className="auth-error">{error}</p> : null}
       </div>
 
-      {loading ? <p className="empty-line">{TXT.loading}</p> : null}
+      <div className="filters-card">
+        <p className="section-label">{TXT.joinTitle}</p>
+        <form className="expense-form" onSubmit={handleJoinByCode}>
+          <label>
+            {TXT.joinCodeLabel}
+            <input
+              type="text"
+              inputMode="numeric"
+              maxLength={6}
+              value={joinCodeInput}
+              onChange={(event) => setJoinCodeInput(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              placeholder={TXT.joinCodePlaceholder}
+              required
+            />
+          </label>
 
+          <button className="button button-primary" type="submit" disabled={joining}>
+            {joining ? TXT.joining : TXT.join}
+          </button>
+        </form>
+        {joinError ? <p className="auth-error">{joinError}</p> : null}
+        {joinSuccess ? <p className="summary-pill">{joinSuccess}</p> : null}
+      </div>
+
+      {error ? <p className="auth-error">{error}</p> : null}
+      {loading ? <p className="empty-line">{TXT.loading}</p> : null}
       {!loading && households.length === 0 ? <p className="empty-line">{TXT.emptyHouseholds}</p> : null}
 
       {!loading && households.length > 0 ? (
         <div className="household-list">
           {households.map((household) => {
             const members = membersByHousehold[household.id] ?? [];
+            const canManageCodes = household.role === "OWNER" || household.role === "ADMIN";
+            const codeInfo = joinCodes[household.id] ?? null;
+            const isBusy = busyHouseholdId === household.id;
+
             return (
               <section key={household.id} className="household-card">
                 <div className="household-head">
                   <strong>{household.name}</strong>
                   <span>{TXT.myRole}: {roleLabel(household.role)}</span>
                 </div>
+
+                {canManageCodes ? (
+                  <div className="invite-controls">
+                    <label>
+                      {TXT.inviteRole}
+                      <select
+                        value={roleByHousehold[household.id] || "MEMBER"}
+                        onChange={(event) =>
+                          setRoleByHousehold((prev) => ({
+                            ...prev,
+                            [household.id]: event.target.value as JoinRole,
+                          }))
+                        }
+                      >
+                        <option value="MEMBER">{TXT.role_MEMBER}</option>
+                        <option value="ADMIN">{TXT.role_ADMIN}</option>
+                      </select>
+                    </label>
+
+                    <div className="invite-actions">
+                      <button
+                        className="button button-primary"
+                        type="button"
+                        onClick={() => handleGenerateCode(household.id)}
+                        disabled={isBusy}
+                      >
+                        {isBusy ? TXT.generatingCode : TXT.generateCode}
+                      </button>
+
+                      {codeInfo ? (
+                        <button
+                          className="button button-secondary"
+                          type="button"
+                          onClick={() => handleClearCode(household.id)}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? TXT.clearingCode : TXT.clearCode}
+                        </button>
+                      ) : null}
+                    </div>
+
+                    {codeInfo ? (
+                      <p className="summary-pill">
+                        {TXT.code}: <strong>{codeInfo.code}</strong> | {TXT.inviteRole}: {roleLabel(codeInfo.role)} | {TXT.expiresAt}: {new Date(codeInfo.expiresAt).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 {members.length === 0 ? (
                   <p className="empty-line">{TXT.emptyMembers}</p>
