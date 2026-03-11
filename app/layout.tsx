@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+
+const manrope = Manrope({ subsets: ["latin", "cyrillic"], variable: "--font-manrope" });
 
 export const metadata: Metadata = {
   title: "Cashflow Compass",
@@ -30,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk">
-      <body>
+      <body className={manrope.variable}>
         <Providers>{children}</Providers>
       </body>
     </html>

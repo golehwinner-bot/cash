@@ -401,8 +401,8 @@ export default function Home() {
     setCategoryLimits((prev) => ({ ...prev, [category]: nextValue }));
   };
 
-  if (status === "loading") return <main className="auth-shell"><div className="auth-card"><h1>Checking session...</h1></div></main>;
-  if (!session?.user) return <main className="auth-shell"><div className="auth-card"><h1>Authentication required</h1><p>Please sign in or create an account to continue.</p><a className="button button-primary" href="/sign-in">Sign in</a><a className="button button-secondary" href="/sign-up">Sign up</a></div></main>;
+  if (status === "loading") return <main className="auth-shell"><div className="auth-card"><h1>{"\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u043a\u0430 \u0441\u0435\u0441\u0456\u0457..."}</h1></div></main>;
+  if (!session?.user) return <main className="auth-shell"><div className="auth-card"><h1>{"\u041f\u043e\u0442\u0440\u0456\u0431\u0435\u043d \u0432\u0445\u0456\u0434"}</h1><p>{"\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044c \u0430\u0431\u043e \u0441\u0442\u0432\u043e\u0440\u0456\u0442\u044c \u0430\u043a\u0430\u0443\u043d\u0442, \u0449\u043e\u0431 \u043f\u0440\u043e\u0434\u043e\u0432\u0436\u0438\u0442\u0438."}</p><a className="button button-primary" href="/sign-in">{"\u0423\u0432\u0456\u0439\u0442\u0438"}</a><a className="button button-secondary" href="/sign-up">{"\u0420\u0435\u0454\u0441\u0442\u0440\u0430\u0446\u0456\u044f"}</a></div></main>;
 
   return (
     <main className="app-shell">

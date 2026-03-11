@@ -1,13 +1,13 @@
 :root {
-  --bg: #f2ebe2;
-  --surface: rgba(255, 252, 248, 0.78);
-  --text: #1b1a17;
-  --muted: #6b6258;
-  --line: rgba(27, 26, 23, 0.09);
-  --primary: #c96f4a;
-  --primary-strong: #ab5333;
-  --accent: #1f6b5b;
-  --shadow: 0 22px 60px rgba(67, 41, 20, 0.12);
+  --bg: #222423;
+  --surface: rgba(34, 36, 35, 0.86);
+  --text: #e8f5ea;
+  --muted: #9fb3a6;
+  --line: rgba(22, 163, 74, 0.34);
+  --primary: #16a34a;
+  --primary-strong: #15803d;
+  --accent: #16a34a;
+  --shadow: 0 22px 60px rgba(0, 0, 0, 0.35);
 }
 
 * {
@@ -17,16 +17,16 @@
 html {
   min-height: 100%;
   background:
-    radial-gradient(circle at top left, rgba(201, 111, 74, 0.2), transparent 32%),
-    radial-gradient(circle at top right, rgba(31, 107, 91, 0.18), transparent 28%),
-    linear-gradient(180deg, #fbf5ec 0%, var(--bg) 100%);
+    radial-gradient(circle at top left, rgba(22, 163, 74, 0.18), transparent 36%),
+    radial-gradient(circle at top right, rgba(22, 163, 74, 0.1), transparent 30%),
+    linear-gradient(180deg, #222423 0%, #1b1d1c 100%);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--text);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--font-manrope), "Manrope", "Segoe UI", sans-serif;
 }
 
 button,
@@ -49,7 +49,7 @@ select {
 
 .tab-btn {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(34, 36, 35, 0.70);
   border-radius: 14px;
   padding: 12px;
   cursor: pointer;
@@ -57,9 +57,9 @@ select {
 }
 
 .tab-btn.active {
-  color: #fff9f4;
-  background: var(--primary);
-  border-color: rgba(201, 111, 74, 0.4);
+  color: #ecfdf3;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  border-color: rgba(22, 163, 74, 0.5);
 }
 
 .tab-page {
@@ -104,8 +104,8 @@ select {
 }
 
 .button-primary {
-  background: var(--primary);
-  color: #fff9f4;
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-strong) 100%);
+  color: #ecfdf3;
 }
 
 .button-primary:hover {
@@ -113,7 +113,7 @@ select {
 }
 
 .button-secondary {
-  background: rgba(255, 250, 242, 0.76);
+  background: rgba(34, 36, 35, 0.76);
   color: var(--text);
   border: 1px solid var(--line);
 }
@@ -135,8 +135,8 @@ select {
 .balance-item {
   padding: 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(27, 26, 23, 0.06);
+  background: rgba(34, 36, 35, 0.88);
+  border: 1px solid rgba(22, 163, 74, 0.16);
 }
 
 .balance-item span {
@@ -174,7 +174,7 @@ select {
   border-radius: 12px;
   border: 1px solid var(--line);
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(27, 29, 28, 0.94);
   outline: none;
 }
 
@@ -184,7 +184,7 @@ select {
   padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(34, 36, 35, 0.55);
 }
 
 .filters-grid {
@@ -219,8 +219,8 @@ select {
   gap: 6px;
   padding: 12px 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(27, 26, 23, 0.06);
+  background: rgba(34, 36, 35, 0.78);
+  border: 1px solid rgba(22, 163, 74, 0.16);
 }
 
 .expense-row {
@@ -237,15 +237,15 @@ select {
 
 .row-action {
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(34, 36, 35, 0.90);
   border-radius: 10px;
   padding: 6px 10px;
   cursor: pointer;
 }
 
 .row-action-danger {
-  color: #9f3d2a;
-  border-color: rgba(159, 61, 42, 0.25);
+  color: var(--primary);
+  border-color: rgba(22, 163, 74, 0.35);
 }
 
 .budget-copy {
@@ -259,14 +259,14 @@ select {
   margin-top: 6px;
   height: 8px;
   border-radius: 999px;
-  background: rgba(27, 26, 23, 0.08);
+  background: rgba(22, 163, 74, 0.20);
   overflow: hidden;
 }
 
 .budget-bar div {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, var(--accent) 0%, var(--primary) 100%);
+  background: linear-gradient(90deg, #16a34a 0%, #15803d 100%);
 }
 
 .budget-input {
@@ -312,8 +312,8 @@ select {
   column-gap: 12px;
   padding: 12px 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(27, 26, 23, 0.06);
+  background: rgba(34, 36, 35, 0.78);
+  border: 1px solid rgba(22, 163, 74, 0.16);
 }
 
 .income-row p {
@@ -339,7 +339,7 @@ select {
   gap: 12px;
   border: 1px solid var(--line);
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(34, 36, 35, 0.86);
   padding: 20px;
   box-shadow: var(--shadow);
 }
@@ -358,12 +358,12 @@ select {
   border-radius: 12px;
   border: 1px solid var(--line);
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(27, 29, 28, 0.95);
 }
 
 .auth-error {
   margin: 0;
-  color: #9f3d2a;
+  color: var(--primary);
 }
 .top-bar {
   display: flex;
@@ -373,7 +373,7 @@ select {
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.62);
+  background: rgba(34, 36, 35, 0.62);
   color: var(--muted);
 }
 
@@ -389,8 +389,8 @@ select {
 .household-card {
   padding: 12px 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(27, 26, 23, 0.06);
+  background: rgba(34, 36, 35, 0.78);
+  border: 1px solid rgba(22, 163, 74, 0.16);
 }
 
 .household-head {
@@ -419,7 +419,7 @@ select {
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(34, 36, 35, 0.88);
 }
 
 .household-member-row p {
@@ -432,7 +432,7 @@ select {
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px dashed var(--line);
-  background: rgba(255, 255, 255, 0.58);
+  background: rgba(34, 36, 35, 0.58);
   display: grid;
   gap: 10px;
 }
@@ -448,7 +448,7 @@ select {
   border-radius: 10px;
   border: 1px solid var(--line);
   padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(27, 29, 28, 0.94);
 }
 
 .invite-actions {
@@ -479,7 +479,7 @@ select {
   border-radius: 10px;
   border: 1px solid var(--line);
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(27, 29, 28, 0.94);
 }
 
 .room-balance-wrap {
@@ -497,15 +497,15 @@ select {
   justify-content: space-between;
   gap: 12px;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(34, 36, 35, 0.85);
   border-radius: 12px;
   padding: 10px 12px;
   cursor: pointer;
 }
 
 .room-balance-row.active {
-  border-color: rgba(201, 111, 74, 0.35);
-  background: rgba(201, 111, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.45);
+  background: rgba(22, 163, 74, 0.12);
 }
 
 @media (max-width: 900px) {
