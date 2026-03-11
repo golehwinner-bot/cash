@@ -51,7 +51,12 @@ export async function POST(request: Request) {
       userId: result.user.id,
       householdId: result.household.id,
     });
-  } catch {
-    return NextResponse.json({ error: "Failed to register." }, { status: 500 });
+  } catch (error) {
+    console.error("Register error:", error);
+
+    const message = error instanceof Error ? error.message : "Failed to register.";
+    const exposedMessage = process.env.NODE_ENV === "development" ? message : "Failed to register.";
+
+    return NextResponse.json({ error: exposedMessage }, { status: 500 });
   }
 }
