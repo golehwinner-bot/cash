@@ -530,3 +530,89 @@ select option {
   background: #2e3230;
   color: var(--text);
 }
+
+.top-signout {
+  color: #ecfdf3;
+}
+
+.top-controls {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.scope-card {
+  width: min(360px, 100%);
+  padding: 14px;
+}
+
+.scope-grid.compact {
+  grid-template-columns: minmax(190px, 1fr) auto;
+  gap: 10px;
+}
+
+.scope-grid.compact .summary-pill {
+  margin-bottom: 8px;
+}
+
+.top-controls .top-bar {
+  margin-bottom: 0;
+  width: auto;
+  color: var(--text);
+}
+
+.top-signout {
+  color: #ecfdf3;
+}
+
+@media (max-width: 900px) {
+  .top-controls {
+    flex-direction: column;
+  }
+
+  .scope-card,
+  .top-controls .top-bar {
+    width: 100%;
+  }
+
+  .scope-grid.compact {
+    grid-template-columns: 1fr;
+  }
+}
+.scope-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.scope-inline .section-label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.scope-inline select {
+  min-width: 220px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  background: rgba(46, 50, 48, 0.92);
+  color: var(--text);
+}
+
+.top-controls .top-bar {
+  gap: 20px;
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .scope-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .scope-inline select {
+    min-width: 0;
+  }
+}

@@ -118,7 +118,7 @@ const TXT = {
   noIncomes: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0445\u043e\u0434\u0456\u0432.",
   noFilteredExpenses: "\u0417\u0430 \u043e\u0431\u0440\u0430\u043d\u0438\u043c\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0430\u043c\u0438 \u0432\u0438\u0442\u0440\u0430\u0442 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e.",
   uah: "\u0433\u0440\u043d",
-  scopeTitle: "\u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u043e\u0431\u043b\u0456\u043a\u0443",
+  scopeTitle: "\u041e\u0431\u043b\u0456\u043a",
   personalScope: "\u041e\u0441\u043e\u0431\u0438\u0441\u0442\u0438\u0439",
   roomScopePrefix: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
   roomBalances: "\u0411\u0430\u043b\u0430\u043d\u0441\u0438 \u043a\u0456\u043c\u043d\u0430\u0442",
@@ -406,25 +406,23 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-      <header className="top-bar">
-        <span>{currentUserName}</span>
-        <button className="row-action" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Sign out</button>
-      </header>
-
-      <section className="scope-bar card">
-        <p className="section-label">{TXT.scopeTitle}</p>
-        <div className="scope-grid">
-          <label>
-            <span>{TXT.activeScope}</span>
+            <div className="top-controls">
+        <section className="scope-card card">
+          <div className="scope-inline">
+            <p className="section-label">{TXT.scopeTitle}</p>
             <select value={activeScopeKey} onChange={(event) => setActiveScopeKey(event.target.value)}>
               {scopeOptions.map((scope) => <option key={scope.key} value={scope.key}>{scope.label}</option>)}
             </select>
-          </label>
-          <p className="summary-pill"><strong>{activeScopeLabel}</strong></p>
-        </div>
-      </section>
+          </div>
+        </section>
 
-      <nav className="tab-nav" aria-label="Primary">
+        <header className="top-bar">
+          <span>{currentUserName}</span>
+          <button className="row-action top-signout" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>{"\u0412\u0438\u0439\u0442\u0438"}</button>
+        </header>
+      </div>
+
+      <nav className="tab-nav" aria-label="Primary"> 
         <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
         <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
         <button className={`tab-btn ${activeTab === "income" ? "active" : ""}`} onClick={() => setActiveTab("income")} type="button">{TXT.tabIncome}</button>
