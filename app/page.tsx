@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { HouseholdMembersPanel } from "./components/household-members-panel";
 
 type CategoryId = "groceries" | "transport" | "entertainment" | "subscriptions" | "coffee";
 type FilterCategoryId = CategoryId | "all";
@@ -83,9 +84,7 @@ const TXT = {
   addIncome: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0434\u043e\u0445\u0456\u0434",
   incomeType: "\u0422\u0438\u043f \u0434\u043e\u0445\u043e\u0434\u0443",
   incomeCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f \u0434\u043e\u0445\u043e\u0434\u0443",
-  totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",
-  settingsStub: "\u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f \u0434\u043e\u0434\u0430\u043c\u043e \u043d\u0430\u0441\u0442\u0443\u043f\u043d\u0438\u043c \u043a\u0440\u043e\u043a\u043e\u043c.",
-  noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
+  totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",  noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
   noIncomes: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0445\u043e\u0434\u0456\u0432.",
   noFilteredExpenses: "\u0417\u0430 \u043e\u0431\u0440\u0430\u043d\u0438\u043c\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0430\u043c\u0438 \u0432\u0438\u0442\u0440\u0430\u0442 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e.",
   uah: "\u0433\u0440\u043d",
@@ -528,12 +527,13 @@ export default function Home() {
 
       {activeTab === "settings" ? (
         <section className="tab-page single">
-          <article className="card">
-            <p className="section-label">{TXT.tabSettings}</p>
-            <p className="empty-line">{TXT.settingsStub}</p>
-          </article>
+          <HouseholdMembersPanel />
         </section>
       ) : null}
     </main>
   );
 }
+
+
+
+
