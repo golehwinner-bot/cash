@@ -2,7 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 const T = {
   title: "\u0412\u0445\u0456\u0434",
@@ -16,8 +16,7 @@ const T = {
 
 export default function SignInPage() {
   const router = useRouter();
-  const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/";
+  const callbackUrl = "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
