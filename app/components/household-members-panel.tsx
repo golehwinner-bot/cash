@@ -24,6 +24,15 @@ type JoinCodeState = {
   expiresAt: string;
 };
 
+type AppNotification = {
+  id: string;
+  title: string;
+  body: string;
+  type: "ROOM_DELETED";
+  createdAt: string;
+  readAt: string | null;
+};
+
 const TXT = {
   section: "Кімната",
   createTitle: "Створити нову кімнату",
@@ -54,6 +63,18 @@ const TXT = {
   joining: "Приєднуємось...",
   joinSuccess: "Успішно приєднано до кімнати.",
   joinError: "Не вдалося приєднатись по коду.",
+  notifications: "Сповіщення",
+  noNotifications: "Поки що немає сповіщень.",
+  markAllRead: "Позначити всі прочитаними",
+  rename: "Редагувати назву",
+  saveName: "Зберегти назву",
+  cancel: "Скасувати",
+  deleteRoom: "Видалити кімнату",
+  deletingRoom: "Видаляємо...",
+  deleteConfirm: "Видалити кімнату? Учасники отримають сповіщення.",
+  ownerOnly: "Лише власник може редагувати або видаляти кімнату.",
+  renameError: "Не вдалося змінити назву кімнати.",
+  deleteError: "Не вдалося видалити кімнату.",
 };
 
 const roleLabel = (role: Member["role"] | Household["role"] | JoinRole) => {
@@ -62,10 +83,19 @@ const roleLabel = (role: Member["role"] | Household["role"] | JoinRole) => {
   return TXT.role_MEMBER;
 };
 
+const formatStamp = (iso: string) =>
+  new Date(iso).toLocaleString("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
 export function HouseholdMembersPanel() {
   const [households, setHouseholds] = useState<Household[]>([]);
   const [membersByHousehold, setMembersByHousehold] = useState<Record<string, Member[]>>({});
   const [joinCodes, setJoinCodes] = useState<Record<string, JoinCodeState | null>>({});
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [roomName, setRoomName] = useState("");
@@ -76,8 +106,18 @@ export function HouseholdMembersPanel() {
   const [joining, setJoining] = useState(false);
   const [busyHouseholdId, setBusyHouseholdId] = useState<string | null>(null);
   const [roleByHousehold, setRoleByHousehold] = useState<Record<string, JoinRole>>({});
+  const [editingHouseholdId, setEditingHouseholdId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
+  const [deletingHouseholdId, setDeletingHouseholdId] = useState<string | null>(null);
 
-  const load = async () => {
+  const loadNotifications = async () => {
+    const response = await fetch("/api/notifications", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = (await response.json()) as { notifications: AppNotification[] };
+    setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+  };
+
+  const loadHouseholds = async () => {
     const householdsResponse = await fetch("/api/households", { cache: "no-store" });
     if (!householdsResponse.ok) throw new Error("Failed to load households");
 
@@ -93,7 +133,7 @@ export function HouseholdMembersPanel() {
       return next;
     });
 
-    const entries = await Promise.all(
+    const memberEntries = await Promise.all(
       list.map(async (household) => {
         const response = await fetch(`/api/households/${household.id}/members`, { cache: "no-store" });
         if (!response.ok) return [household.id, [] as Member[]] as const;
@@ -103,7 +143,7 @@ export function HouseholdMembersPanel() {
       }),
     );
 
-    setMembersByHousehold(Object.fromEntries(entries));
+    setMembersByHousehold(Object.fromEntries(memberEntries));
 
     const codeEntries = await Promise.all(
       list
@@ -125,6 +165,10 @@ export function HouseholdMembersPanel() {
     );
 
     setJoinCodes((prev) => ({ ...prev, ...Object.fromEntries(codeEntries) }));
+  };
+
+  const load = async () => {
+    await Promise.all([loadHouseholds(), loadNotifications()]);
   };
 
   useEffect(() => {
@@ -265,9 +309,102 @@ export function HouseholdMembersPanel() {
     }
   };
 
+  const handleRenameRoom = async (householdId: string) => {
+    if (!editingName.trim()) return;
+
+    setError("");
+    setBusyHouseholdId(householdId);
+
+    try {
+      const response = await fetch(`/api/households/${householdId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editingName.trim() }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: TXT.renameError }));
+        setError(body.error || TXT.renameError);
+        return;
+      }
+
+      setEditingHouseholdId(null);
+      setEditingName("");
+      await loadHouseholds();
+    } catch {
+      setError(TXT.renameError);
+    } finally {
+      setBusyHouseholdId(null);
+    }
+  };
+
+  const handleDeleteRoom = async (householdId: string) => {
+    if (!confirm(TXT.deleteConfirm)) return;
+
+    setError("");
+    setDeletingHouseholdId(householdId);
+
+    try {
+      const response = await fetch(`/api/households/${householdId}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: TXT.deleteError }));
+        setError(body.error || TXT.deleteError);
+        return;
+      }
+
+      await load();
+    } catch {
+      setError(TXT.deleteError);
+    } finally {
+      setDeletingHouseholdId(null);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    }).catch(() => null);
+
+    await loadNotifications();
+  };
+
+  const unreadCount = notifications.filter((item) => !item.readAt).length;
+
   return (
     <article className="card">
       <p className="section-label">{TXT.section}</p>
+
+      <div className="filters-card">
+        <p className="section-label">{TXT.notifications}</p>
+        {notifications.length === 0 ? (
+          <p className="empty-line">{TXT.noNotifications}</p>
+        ) : (
+          <>
+            <div className="invite-actions">
+              <p className="summary-pill">Непрочитані: <strong>{unreadCount}</strong></p>
+              <button className="button button-secondary" type="button" onClick={markAllNotificationsRead}>
+                {TXT.markAllRead}
+              </button>
+            </div>
+            <div className="household-members">
+              {notifications.map((item) => (
+                <div className="household-member-row" key={item.id}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <p>{item.body}</p>
+                  </div>
+                  <span>{formatStamp(item.createdAt)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="filters-card">
         <p className="section-label">{TXT.createTitle}</p>
@@ -322,15 +459,79 @@ export function HouseholdMembersPanel() {
           {households.map((household) => {
             const members = membersByHousehold[household.id] ?? [];
             const canManageCodes = household.role === "OWNER" || household.role === "ADMIN";
+            const isOwner = household.role === "OWNER";
             const codeInfo = joinCodes[household.id] ?? null;
             const isBusy = busyHouseholdId === household.id;
+            const isDeleting = deletingHouseholdId === household.id;
+            const isEditing = editingHouseholdId === household.id;
 
             return (
               <section key={household.id} className="household-card">
                 <div className="household-head">
-                  <strong>{household.name}</strong>
-                  <span>{TXT.myRole}: {roleLabel(household.role)}</span>
+                  {isEditing ? (
+                    <div className="invite-controls">
+                      <label>
+                        {TXT.roomName}
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(event) => setEditingName(event.target.value)}
+                          required
+                        />
+                      </label>
+                      <div className="invite-actions">
+                        <button
+                          className="button button-primary"
+                          type="button"
+                          onClick={() => handleRenameRoom(household.id)}
+                          disabled={isBusy}
+                        >
+                          {TXT.saveName}
+                        </button>
+                        <button
+                          className="button button-secondary"
+                          type="button"
+                          onClick={() => {
+                            setEditingHouseholdId(null);
+                            setEditingName("");
+                          }}
+                        >
+                          {TXT.cancel}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <strong>{household.name}</strong>
+                      <span>{TXT.myRole}: {roleLabel(household.role)}</span>
+                    </>
+                  )}
                 </div>
+
+                {isOwner ? (
+                  <div className="invite-actions">
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => {
+                        setEditingHouseholdId(household.id);
+                        setEditingName(household.name);
+                      }}
+                    >
+                      {TXT.rename}
+                    </button>
+                    <button
+                      className="button button-secondary"
+                      type="button"
+                      onClick={() => handleDeleteRoom(household.id)}
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? TXT.deletingRoom : TXT.deleteRoom}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="empty-line">{TXT.ownerOnly}</p>
+                )}
 
                 {canManageCodes ? (
                   <div className="invite-controls">

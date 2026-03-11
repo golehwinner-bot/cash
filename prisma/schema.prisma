@@ -24,20 +24,25 @@ enum IncomeCategory {
   OTHER
 }
 
+enum NotificationType {
+  ROOM_DELETED
+}
+
 model User {
-  id             String            @id @default(cuid())
-  name           String?
-  email          String            @unique
-  emailVerified  DateTime?
-  image          String?
-  passwordHash   String?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-  accounts       Account[]
-  sessions       Session[]
-  memberships    HouseholdMember[]
-  createdExpenses Expense[]        @relation("ExpenseCreatedBy")
-  createdIncomes  Income[]         @relation("IncomeCreatedBy")
+  id              String            @id @default(cuid())
+  name            String?
+  email           String            @unique
+  emailVerified   DateTime?
+  image           String?
+  passwordHash    String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  accounts        Account[]
+  sessions        Session[]
+  memberships     HouseholdMember[]
+  notifications   Notification[]
+  createdExpenses Expense[]         @relation("ExpenseCreatedBy")
+  createdIncomes  Income[]          @relation("IncomeCreatedBy")
 }
 
 model Household {
@@ -54,48 +59,62 @@ model Household {
 }
 
 model HouseholdMember {
-  id           String        @id @default(cuid())
-  role         HouseholdRole @default(MEMBER)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  userId       String
-  householdId  String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  id          String        @id @default(cuid())
+  role        HouseholdRole @default(MEMBER)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  userId      String
+  householdId String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
 
   @@unique([userId, householdId])
   @@index([householdId])
 }
 
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  body      String
+  createdAt DateTime         @default(now())
+  readAt    DateTime?
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
 model Expense {
-  id           String      @id @default(cuid())
-  title        String
-  amount       Int
-  category     String
-  date         DateTime
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  householdId  String
-  createdById  String
-  household    Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  createdBy    User        @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  id          String    @id @default(cuid())
+  title       String
+  amount      Int
+  category    String
+  date        DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  householdId String
+  createdById String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([householdId, date])
 }
 
 model Income {
-  id           String         @id @default(cuid())
-  title        String
-  amount       Int
-  type         IncomeType
-  category     IncomeCategory
-  date         DateTime
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
-  householdId  String
-  createdById  String
-  household    Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  createdBy    User           @relation("IncomeCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  id          String         @id @default(cuid())
+  title       String
+  amount      Int
+  type        IncomeType
+  category    IncomeCategory
+  date        DateTime
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  householdId String
+  createdById String
+  household   Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy   User           @relation("IncomeCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([householdId, date])
 }
@@ -139,4 +158,3 @@ model VerificationToken {
 
   @@id([identifier, token])
 }
-
