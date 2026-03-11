@@ -22,7 +22,7 @@ type FilterCategoryId = CategoryId | "all";
 type AppTab = "home" | "expenses" | "income" | "room";
 
 type IncomeTypeId = "cash" | "card";
-type IncomeCategoryId = "salary" | "part_time" | "other";
+type IncomeCategoryId = "salary" | "part_time" | "rent" | "sale" | "fop" | "other";
 type ExpenseSourceId = "cash" | "card";
 
 type Expense = {
@@ -155,6 +155,9 @@ const incomeTypes: Array<{ id: IncomeTypeId; label: string }> = [
 const incomeCategories: Array<{ id: IncomeCategoryId; label: string }> = [
   { id: "salary", label: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430" },
   { id: "part_time", label: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a" },
+  { id: "rent", label: "\u041e\u0440\u0435\u043d\u0434\u0430" },
+  { id: "sale", label: "\u041f\u0440\u043e\u0434\u0430\u0436" },
+  { id: "fop", label: "\u0424\u041e\u041f" },
   { id: "other", label: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438" },
 ];
 
@@ -182,6 +185,9 @@ const incomeTypeLabelMap: Record<IncomeTypeId, string> = {
 const incomeCategoryLabelMap: Record<IncomeCategoryId, string> = {
   salary: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430",
   part_time: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a",
+  rent: "\u041e\u0440\u0435\u043d\u0434\u0430",
+  sale: "\u041f\u0440\u043e\u0434\u0430\u0436",
+  fop: "\u0424\u041e\u041f",
   other: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438",
 };
 
