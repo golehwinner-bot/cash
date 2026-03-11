@@ -456,3 +456,60 @@ select {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+.scope-bar {
+  margin-bottom: 14px;
+}
+
+.scope-grid {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.scope-grid label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.scope-grid select {
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.room-balance-wrap {
+  margin-top: 16px;
+}
+
+.room-balance-list {
+  display: grid;
+  gap: 8px;
+}
+
+.room-balance-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.room-balance-row.active {
+  border-color: rgba(201, 111, 74, 0.35);
+  background: rgba(201, 111, 74, 0.1);
+}
+
+@media (max-width: 900px) {
+  .scope-grid {
+    grid-template-columns: 1fr;
+  }
+}

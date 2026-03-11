@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -51,85 +51,98 @@ type ExpenseFilters = {
   dateTo: string;
 };
 
+type Household = {
+  id: string;
+  name: string;
+  role: "OWNER" | "ADMIN" | "MEMBER";
+};
+
 const STORAGE_EXPENSES = "cashflow-expenses-v1";
 const STORAGE_INCOMES = "cashflow-incomes-v1";
 
 const TXT = {
-  tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
-  tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
-  tabIncome: "\u0414\u043e\u0445\u0456\u0434",
-  tabRoom: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
-  balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
-  totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
-  cashBalance: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
-  cardBalance: "\u041a\u0430\u0440\u0442\u043a\u0430",
-  addExpense: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443",
-  quickEntry: "\u0428\u0432\u0438\u0434\u043a\u0438\u0439 \u0437\u0430\u043f\u0438\u0441",
-  name: "\u041d\u0430\u0437\u0432\u0430",
-  namePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0410\u0422\u0411",
-  incomeNamePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0410\u0432\u0430\u043d\u0441",
-  category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f",
-  amount: "\u0421\u0443\u043c\u0430",
-  date: "\u0414\u0430\u0442\u0430",
-  save: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438",
-  expensesTitle: "\u0423\u0441\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438",
-  filters: "\u0424\u0456\u043b\u044c\u0442\u0440\u0438",
-  periodSummary: "\u041f\u0456\u0434\u0441\u0443\u043c\u043e\u043a \u0437\u0430 \u043f\u0435\u0440\u0456\u043e\u0434",
-  records: "\u0437\u0430\u043f\u0438\u0441\u0456\u0432",
-  allCategories: "\u0423\u0441\u0456 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0457",
-  dateFrom: "\u0412\u0456\u0434",
-  dateTo: "\u0414\u043e",
-  clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
-  categoryLimits: "\u041b\u0456\u043c\u0456\u0442\u0438 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0439",
-  delete: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
-  author: "\u0410\u0432\u0442\u043e\u0440",
-  unknownUser: "\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u043e\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447",
-  incomeTitle: "\u0414\u043e\u0445\u043e\u0434\u0438",
-  addIncome: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0434\u043e\u0445\u0456\u0434",
-  incomeType: "\u0422\u0438\u043f \u0434\u043e\u0445\u043e\u0434\u0443",
-  incomeCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f \u0434\u043e\u0445\u043e\u0434\u0443",
-  totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",  noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
-  noIncomes: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0445\u043e\u0434\u0456\u0432.",
-  noFilteredExpenses: "\u0417\u0430 \u043e\u0431\u0440\u0430\u043d\u0438\u043c\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0430\u043c\u0438 \u0432\u0438\u0442\u0440\u0430\u0442 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e.",
-  uah: "\u0433\u0440\u043d",
+  tabHome: "Основна",
+  tabExpenses: "Витрати",
+  tabIncome: "Дохід",
+  tabRoom: "Кімната",
+  balance: "Баланс",
+  totalBalance: "Загальний баланс",
+  cashBalance: "Готівка",
+  cardBalance: "Картка",
+  addExpense: "Додати витрату",
+  quickEntry: "Швидкий запис",
+  name: "Назва",
+  namePlaceholder: "Наприклад, АТБ",
+  incomeNamePlaceholder: "Наприклад, Аванс",
+  category: "Категорія",
+  amount: "Сума",
+  date: "Дата",
+  save: "Зберегти",
+  expensesTitle: "Усі витрати",
+  filters: "Фільтри",
+  periodSummary: "Підсумок за період",
+  records: "записів",
+  allCategories: "Усі категорії",
+  dateFrom: "Від",
+  dateTo: "До",
+  clearFilters: "Скинути фільтри",
+  categoryLimits: "Ліміти категорій",
+  delete: "Видалити",
+  author: "Автор",
+  unknownUser: "Невідомий користувач",
+  incomeTitle: "Доходи",
+  addIncome: "Додати дохід",
+  incomeType: "Тип доходу",
+  incomeCategory: "Категорія доходу",
+  totalIncome: "Сукупний дохід",
+  noExpenses: "Поки що немає витрат.",
+  noIncomes: "Поки що немає доходів.",
+  noFilteredExpenses: "За обраними фільтрами витрат не знайдено.",
+  uah: "грн",
+  scopeTitle: "Контекст обліку",
+  personalScope: "Особистий",
+  roomScopePrefix: "Кімната",
+  roomBalances: "Баланси кімнат",
+  noRoomsYet: "Ви ще не є учасником жодної кімнати.",
+  activeScope: "Активний контекст",
 };
 
 const categories: Array<{ id: CategoryId; label: string }> = [
-  { id: "groceries", label: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u0438" },
-  { id: "transport", label: "\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442" },
-  { id: "entertainment", label: "\u0420\u043e\u0437\u0432\u0430\u0433\u0438" },
-  { id: "subscriptions", label: "\u041f\u0456\u0434\u043f\u0438\u0441\u043a\u0438" },
-  { id: "coffee", label: "\u041a\u0430\u0444\u0435" },
+  { id: "groceries", label: "Продукти" },
+  { id: "transport", label: "Транспорт" },
+  { id: "entertainment", label: "Розваги" },
+  { id: "subscriptions", label: "Підписки" },
+  { id: "coffee", label: "Кафе" },
 ];
 
 const incomeTypes: Array<{ id: IncomeTypeId; label: string }> = [
-  { id: "cash", label: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" },
-  { id: "card", label: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u0430" },
+  { id: "cash", label: "Готівка" },
+  { id: "card", label: "Банківська картка" },
 ];
 
 const incomeCategories: Array<{ id: IncomeCategoryId; label: string }> = [
-  { id: "salary", label: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430" },
-  { id: "part_time", label: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a" },
-  { id: "other", label: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438" },
+  { id: "salary", label: "Зарплата" },
+  { id: "part_time", label: "Підробіток" },
+  { id: "other", label: "Інші доходи" },
 ];
 
 const categoryLabelMap: Record<CategoryId, string> = {
-  groceries: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u0438",
-  transport: "\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442",
-  entertainment: "\u0420\u043e\u0437\u0432\u0430\u0433\u0438",
-  subscriptions: "\u041f\u0456\u0434\u043f\u0438\u0441\u043a\u0438",
-  coffee: "\u041a\u0430\u0444\u0435",
+  groceries: "Продукти",
+  transport: "Транспорт",
+  entertainment: "Розваги",
+  subscriptions: "Підписки",
+  coffee: "Кафе",
 };
 
 const incomeTypeLabelMap: Record<IncomeTypeId, string> = {
-  cash: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
-  card: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u0430",
+  cash: "Готівка",
+  card: "Банківська картка",
 };
 
 const incomeCategoryLabelMap: Record<IncomeCategoryId, string> = {
-  salary: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430",
-  part_time: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a",
-  other: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438",
+  salary: "Зарплата",
+  part_time: "Підробіток",
+  other: "Інші доходи",
 };
 
 const categoryLimits: Record<CategoryId, number> = {
@@ -141,15 +154,15 @@ const categoryLimits: Record<CategoryId, number> = {
 };
 
 const initialExpenses: Expense[] = [
-  { id: "1", name: "\u0421\u0456\u043b\u044c\u043f\u043e", category: "groceries", amount: 1240, date: "2026-03-10" },
+  { id: "1", name: "Сільпо", category: "groceries", amount: 1240, date: "2026-03-10" },
   { id: "2", name: "Bolt", category: "transport", amount: 186, date: "2026-03-10" },
   { id: "3", name: "Monobank", category: "subscriptions", amount: 219, date: "2026-03-09" },
   { id: "4", name: "Coffee Lab", category: "coffee", amount: 145, date: "2026-03-09" },
 ];
 
 const initialIncomes: Income[] = [
-  { id: "i1", name: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430", type: "card", category: "salary", amount: 42000, date: "2026-03-01" },
-  { id: "i2", name: "\u0424\u0440\u0456\u043b\u0430\u043d\u0441", type: "cash", category: "part_time", amount: 8500, date: "2026-03-05" },
+  { id: "i1", name: "Зарплата", type: "card", category: "salary", amount: 42000, date: "2026-03-01" },
+  { id: "i2", name: "Фріланс", type: "cash", category: "part_time", amount: 8500, date: "2026-03-05" },
 ];
 
 const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, amount: "", date: "" });
@@ -168,6 +181,36 @@ const formatDate = (value: string) =>
 const toId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const formatPlain = (value: number) => value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
+const isExpenseArray = (value: unknown): value is Expense[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "object" && item !== null && "id" in item);
+
+const isIncomeArray = (value: unknown): value is Income[] =>
+  Array.isArray(value) && value.every((item) => typeof item === "object" && item !== null && "id" in item);
+
+const parseExpenses = (raw: string | null): Expense[] | null => {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return isExpenseArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const parseIncomes = (raw: string | null): Income[] | null => {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return isIncomeArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
+const storageSuffix = (scopeKey: string) => scopeKey;
+const storageKeyExpenses = (scopeKey: string) => `${STORAGE_EXPENSES}:${storageSuffix(scopeKey)}`;
+const storageKeyIncomes = (scopeKey: string) => `${STORAGE_INCOMES}:${storageSuffix(scopeKey)}`;
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
@@ -176,43 +219,91 @@ export default function Home() {
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [incomeForm, setIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [filters, setFilters] = useState<ExpenseFilters>(defaultFilters);
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [activeScopeKey, setActiveScopeKey] = useState("personal");
   const { data: session, status } = useSession();
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
+
+  const scopeOptions = useMemo(
+    () => [
+      { key: "personal", label: TXT.personalScope },
+      ...households.map((room) => ({ key: `room:${room.id}`, label: `${TXT.roomScopePrefix}: ${room.name}` })),
+    ],
+    [households],
+  );
+
+  const activeScopeLabel = useMemo(() => {
+    const found = scopeOptions.find((item) => item.key === activeScopeKey);
+    return found ? found.label : TXT.personalScope;
+  }, [scopeOptions, activeScopeKey]);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
     setExpenseForm((prev) => ({ ...prev, date: prev.date || today }));
     setIncomeForm((prev) => ({ ...prev, date: prev.date || today }));
-
-    try {
-      const rawExpenses = localStorage.getItem(STORAGE_EXPENSES);
-      const rawIncomes = localStorage.getItem(STORAGE_INCOMES);
-
-      if (rawExpenses) {
-        const parsed = JSON.parse(rawExpenses) as Expense[];
-        if (Array.isArray(parsed)) setExpenses(parsed);
-      }
-
-      if (rawIncomes) {
-        const parsed = JSON.parse(rawIncomes) as Income[];
-        if (Array.isArray(parsed)) setIncomes(parsed);
-      }
-    } catch {
-      // ignore
-    }
-
     setMounted(true);
   }, []);
 
   useEffect(() => {
+    if (!session?.user) return;
+
+    const loadHouseholds = async () => {
+      const response = await fetch("/api/households", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = (await response.json()) as { households: Household[] };
+      const list = Array.isArray(data.households) ? data.households : [];
+      setHouseholds(list);
+
+      setActiveScopeKey((prev) => {
+        if (prev === "personal") return prev;
+        const exists = list.some((room) => `room:${room.id}` === prev);
+        return exists ? prev : "personal";
+      });
+    };
+
+    void loadHouseholds();
+  }, [session?.user?.id, session?.user?.email]);
+
+  useEffect(() => {
     if (!mounted) return;
+
+    const today = new Date().toISOString().slice(0, 10);
+    setExpenseForm((prev) => ({ ...prev, date: today }));
+    setIncomeForm((prev) => ({ ...prev, date: today }));
+
+    const keyExp = storageKeyExpenses(activeScopeKey);
+    const keyInc = storageKeyIncomes(activeScopeKey);
+
+    const scopedExpenses = parseExpenses(localStorage.getItem(keyExp));
+    const scopedIncomes = parseIncomes(localStorage.getItem(keyInc));
+
+    if (scopedExpenses) {
+      setExpenses(scopedExpenses);
+    } else if (activeScopeKey === "personal") {
+      setExpenses(initialExpenses);
+    } else {
+      setExpenses([]);
+    }
+
+    if (scopedIncomes) {
+      setIncomes(scopedIncomes);
+    } else if (activeScopeKey === "personal") {
+      setIncomes(initialIncomes);
+    } else {
+      setIncomes([]);
+    }
+  }, [mounted, activeScopeKey]);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     try {
-      localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(expenses));
-      localStorage.setItem(STORAGE_INCOMES, JSON.stringify(incomes));
+      localStorage.setItem(storageKeyExpenses(activeScopeKey), JSON.stringify(expenses));
+      localStorage.setItem(storageKeyIncomes(activeScopeKey), JSON.stringify(incomes));
     } catch {
       // ignore
     }
-  }, [expenses, incomes, mounted]);
+  }, [expenses, incomes, mounted, activeScopeKey]);
 
   const formatCurrency = (value: number) =>
     mounted ? currency.format(value) : `${formatPlain(value)} ${TXT.uah}`;
@@ -235,6 +326,20 @@ export default function Home() {
   const cardIncome = useMemo(() => incomes.filter((income) => income.type === "card").reduce((sum, income) => sum + income.amount, 0), [incomes]);
   const totalBalance = totalIncomeAll - totalSpentAll;
 
+  const roomBalances = useMemo(() => {
+    if (!mounted) {
+      return households.map((room) => ({ id: room.id, name: room.name, total: 0 }));
+    }
+
+    return households.map((room) => {
+      const scopeKey = `room:${room.id}`;
+      const exp = parseExpenses(localStorage.getItem(storageKeyExpenses(scopeKey))) ?? [];
+      const inc = parseIncomes(localStorage.getItem(storageKeyIncomes(scopeKey))) ?? [];
+      const total = inc.reduce((sum, item) => sum + item.amount, 0) - exp.reduce((sum, item) => sum + item.amount, 0);
+      return { id: room.id, name: room.name, total };
+    });
+  }, [households, mounted, expenses, incomes, activeScopeKey]);
+
   const limitsByCategory = useMemo(() => {
     const totals = filteredExpenses.reduce<Record<CategoryId, number>>(
       (acc, expense) => {
@@ -244,8 +349,7 @@ export default function Home() {
       { groceries: 0, transport: 0, entertainment: 0, subscriptions: 0, coffee: 0 },
     );
 
-  
-  return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
+    return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
       const limit = categoryLimits[category];
       const spent = totals[category];
       const progress = Math.min(100, Math.round((spent / limit) * 100));
@@ -300,7 +404,6 @@ export default function Home() {
     setIncomes((prev) => prev.filter((income) => income.id !== id));
   };
 
-
   if (status === "loading") {
     return (
       <main className="auth-shell">
@@ -323,12 +426,29 @@ export default function Home() {
       </main>
     );
   }
+
   return (
     <main className="app-shell">
       <header className="top-bar">
         <span>{currentUserName}</span>
         <button className="row-action" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Sign out</button>
       </header>
+
+      <section className="scope-bar card">
+        <p className="section-label">{TXT.scopeTitle}</p>
+        <div className="scope-grid">
+          <label>
+            <span>{TXT.activeScope}</span>
+            <select value={activeScopeKey} onChange={(event) => setActiveScopeKey(event.target.value)}>
+              {scopeOptions.map((scope) => (
+                <option key={scope.key} value={scope.key}>{scope.label}</option>
+              ))}
+            </select>
+          </label>
+          <p className="summary-pill"><strong>{activeScopeLabel}</strong></p>
+        </div>
+      </section>
+
       <nav className="tab-nav" aria-label="Primary">
         <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
         <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
@@ -353,6 +473,27 @@ export default function Home() {
                 <span>{TXT.cardBalance}</span>
                 <strong>{formatCurrency(cardIncome)}</strong>
               </div>
+            </div>
+
+            <div className="room-balance-wrap">
+              <p className="section-label">{TXT.roomBalances}</p>
+              {roomBalances.length === 0 ? (
+                <p className="empty-line">{TXT.noRoomsYet}</p>
+              ) : (
+                <div className="room-balance-list">
+                  {roomBalances.map((room) => (
+                    <button
+                      key={room.id}
+                      type="button"
+                      className={`room-balance-row ${activeScopeKey === `room:${room.id}` ? "active" : ""}`}
+                      onClick={() => setActiveScopeKey(`room:${room.id}`)}
+                    >
+                      <span>{room.name}</span>
+                      <strong>{formatCurrency(room.total)}</strong>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </article>
 
@@ -540,16 +681,3 @@ export default function Home() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
