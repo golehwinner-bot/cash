@@ -19,10 +19,35 @@
 - `NEXTAUTH_SECRET` = випадковий секрет (мінімум 32 байти)
 - `NEXTAUTH_URL` = URL твого прод-домену (наприклад `https://cash-l5cb.vercel.app`)
 4. Після додавання env змінних зроби Redeploy у Vercel.
-5. Для створення таблиць у БД запусти Prisma push один раз через Vercel/CI або локально:
+5. Для створення таблиць у прод-БД запусти Prisma push один раз (локально/CI):
 - `npx prisma db push`
 
-## Локальний запуск (опційно)
+## Локально через Docker Desktop
+
+1. Встанови та запусти Docker Desktop.
+2. У корені проєкту виконай:
+
+```bash
+docker compose up --build
+```
+
+3. Відкрий застосунок: `http://localhost:3000`
+4. PostgreSQL буде доступний на `localhost:5432`.
+
+Корисні команди:
+
+```bash
+# зупинити контейнери
+docker compose down
+
+# зупинити і видалити том БД (повне очищення локальної БД)
+docker compose down -v
+
+# перегляд логів
+docker compose logs -f
+```
+
+## Локальний запуск без Docker (опційно)
 
 ```bash
 npm install
