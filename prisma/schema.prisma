@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum HouseholdRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum IncomeType {
+  CASH
+  CARD
+}
+
+enum IncomeCategory {
+  SALARY
+  PART_TIME
+  OTHER
+}
+
+model User {
+  id             String            @id @default(cuid())
+  name           String?
+  email          String            @unique
+  emailVerified  DateTime?
+  image          String?
+  passwordHash   String?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  memberships    HouseholdMember[]
+  createdExpenses Expense[]        @relation("ExpenseCreatedBy")
+  createdIncomes  Income[]         @relation("IncomeCreatedBy")
+}
+
+model Household {
+  id          String            @id @default(cuid())
+  name        String
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  members     HouseholdMember[]
+  expenses    Expense[]
+  incomes     Income[]
+}
+
+model HouseholdMember {
+  id           String        @id @default(cuid())
+  role         HouseholdRole @default(MEMBER)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  userId       String
+  householdId  String
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, householdId])
+  @@index([householdId])
+}
+
+model Expense {
+  id           String      @id @default(cuid())
+  title        String
+  amount       Int
+  category     String
+  date         DateTime
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  householdId  String
+  createdById  String
+  household    Household   @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy    User        @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([householdId, date])
+}
+
+model Income {
+  id           String         @id @default(cuid())
+  title        String
+  amount       Int
+  type         IncomeType
+  category     IncomeCategory
+  date         DateTime
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  householdId  String
+  createdById  String
+  household    Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy    User           @relation("IncomeCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([householdId, date])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}

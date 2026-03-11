@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 type CategoryId = "groceries" | "transport" | "entertainment" | "subscriptions" | "coffee";
 type FilterCategoryId = CategoryId | "all";
@@ -172,6 +173,7 @@ export default function Home() {
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [incomeForm, setIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [filters, setFilters] = useState<ExpenseFilters>(defaultFilters);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -238,7 +240,8 @@ export default function Home() {
       { groceries: 0, transport: 0, entertainment: 0, subscriptions: 0, coffee: 0 },
     );
 
-    return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
+  
+  return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
       const limit = categoryLimits[category];
       const spent = totals[category];
       const progress = Math.min(100, Math.round((spent / limit) * 100));
@@ -291,8 +294,35 @@ export default function Home() {
     setIncomes((prev) => prev.filter((income) => income.id !== id));
   };
 
+
+  if (status === "loading") {
+    return (
+      <main className="auth-shell">
+        <div className="auth-card">
+          <h1>Р СџР ВµРЎР‚Р ВµР Р†РЎвЂ“РЎР‚РЎРЏРЎвЂќР СР С• РЎРѓР ВµРЎРѓРЎвЂ“РЎР‹...</h1>
+        </div>
+      </main>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <main className="auth-shell">
+        <div className="auth-card">
+          <h1>Р СџР С•РЎвЂљРЎР‚РЎвЂ“Р В±Р Р…Р В° Р В°Р Р†РЎвЂљР С•РЎР‚Р С‘Р В·Р В°РЎвЂ РЎвЂ“РЎРЏ</h1>
+          <p>Р В©Р С•Р В± Р С—РЎР‚Р В°РЎвЂ РЎР‹Р Р†Р В°РЎвЂљР С‘ Р В· РЎРѓРЎвЂ“Р СР ВµР в„–Р Р…Р С‘Р С Р В±РЎР‹Р Т‘Р В¶Р ВµРЎвЂљР С•Р С, РЎС“Р Р†РЎвЂ“Р в„–Р Т‘Р С‘ Р Р† Р В°Р С”Р В°РЎС“Р Р…РЎвЂљ Р В°Р В±Р С• РЎРѓРЎвЂљР Р†Р С•РЎР‚Р С‘ Р Р…Р С•Р Р†Р С‘Р в„–.</p>
+          <a className="button button-primary" href="/sign-in">Р Р€Р Р†РЎвЂ“Р в„–РЎвЂљР С‘</a>
+          <a className="button button-secondary" href="/sign-up">Р В Р ВµРЎвЂќРЎРѓРЎвЂљРЎР‚Р В°РЎвЂ РЎвЂ“РЎРЏ</a>
+        </div>
+      </main>
+    );
+  }
   return (
     <main className="app-shell">
+      <header className="top-bar">
+        <span>Р С™Р С•РЎР‚Р С‘РЎРѓРЎвЂљРЎС“Р Р†Р В°РЎвЂЎ: {session.user.email}</span>
+        <button className="row-action" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>Р вЂ™Р С‘Р в„–РЎвЂљР С‘</button>
+      </header>
       <nav className="tab-nav" aria-label="Primary">
         <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
         <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
