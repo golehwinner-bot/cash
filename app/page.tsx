@@ -4,7 +4,20 @@ import { useEffect, useMemo, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { HouseholdMembersPanel } from "./components/household-members-panel";
 
-type CategoryId = "groceries" | "transport" | "entertainment" | "subscriptions" | "coffee";
+type CategoryId =
+  | "groceries"
+  | "transport"
+  | "entertainment"
+  | "subscriptions"
+  | "utilities"
+  | "auto"
+  | "sport"
+  | "medicine"
+  | "gifts_guests"
+  | "home_goods"
+  | "clothes_shoes"
+  | "debts"
+  | "other";
 type FilterCategoryId = CategoryId | "all";
 type AppTab = "home" | "expenses" | "income" | "room";
 
@@ -64,94 +77,110 @@ const STORAGE_EXPENSES = "cashflow-expenses-v1";
 const STORAGE_INCOMES = "cashflow-incomes-v1";
 
 const TXT = {
-  tabHome: "Основна",
-  tabExpenses: "Витрати",
-  tabIncome: "Дохід",
-  tabRoom: "Кімната",
-  balance: "Баланс",
-  totalBalance: "Загальний баланс",
-  cashBalance: "Готівка",
-  cardBalance: "Картка",
-  addExpense: "Додати витрату",
-  quickEntry: "Швидкий запис",
-  name: "Назва",
-  namePlaceholder: "Наприклад, АТБ",
-  incomeNamePlaceholder: "Наприклад, Аванс",
-  category: "Категорія",
-  expenseSource: "Спосіб оплати",
-  amount: "Сума",
-  date: "Дата",
-  save: "Зберегти",
-  expensesTitle: "Усі витрати",
-  filters: "Фільтри",
-  periodSummary: "Підсумок за період",
-  records: "записів",
-  allCategories: "Усі категорії",
-  dateFrom: "Від",
-  dateTo: "До",
-  clearFilters: "Скинути фільтри",
-  categoryLimits: "Ліміти категорій",
-  delete: "Видалити",
-  author: "Автор",
-  unknownUser: "Невідомий користувач",
-  incomeTitle: "Доходи",
-  addIncome: "Додати дохід",
-  incomeType: "Тип доходу",
-  incomeCategory: "Категорія доходу",
-  totalIncome: "Сукупний дохід",
-  noExpenses: "Поки що немає витрат.",
-  noIncomes: "Поки що немає доходів.",
-  noFilteredExpenses: "За обраними фільтрами витрат не знайдено.",
-  uah: "грн",
-  scopeTitle: "Контекст обліку",
-  personalScope: "Особистий",
-  roomScopePrefix: "Кімната",
-  roomBalances: "Баланси кімнат",
-  noRoomsYet: "Ви ще не є учасником жодної кімнати.",
-  activeScope: "Активний контекст",
+  tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
+  tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
+  tabIncome: "\u0414\u043e\u0445\u0456\u0434",
+  tabRoom: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
+  balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
+  totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
+  cashBalance: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
+  cardBalance: "\u041a\u0430\u0440\u0442\u043a\u0430",
+  addExpense: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443",
+  quickEntry: "\u0428\u0432\u0438\u0434\u043a\u0438\u0439 \u0437\u0430\u043f\u0438\u0441",
+  name: "\u041d\u0430\u0437\u0432\u0430",
+  namePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0410\u0422\u0411",
+  incomeNamePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0410\u0432\u0430\u043d\u0441",
+  category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f",
+  expenseSource: "\u0421\u043f\u043e\u0441\u0456\u0431 \u043e\u043f\u043b\u0430\u0442\u0438",
+  amount: "\u0421\u0443\u043c\u0430",
+  date: "\u0414\u0430\u0442\u0430",
+  save: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438",
+  expensesTitle: "\u0423\u0441\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438",
+  filters: "\u0424\u0456\u043b\u044c\u0442\u0440\u0438",
+  periodSummary: "\u041f\u0456\u0434\u0441\u0443\u043c\u043e\u043a \u0437\u0430 \u043f\u0435\u0440\u0456\u043e\u0434",
+  records: "\u0437\u0430\u043f\u0438\u0441\u0456\u0432",
+  allCategories: "\u0423\u0441\u0456 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0457",
+  dateFrom: "\u0412\u0456\u0434",
+  dateTo: "\u0414\u043e",
+  clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
+  categoryLimits: "\u041b\u0456\u043c\u0456\u0442\u0438 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0439",
+  delete: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
+  author: "\u0410\u0432\u0442\u043e\u0440",
+  unknownUser: "\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u043e\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447",
+  incomeTitle: "\u0414\u043e\u0445\u043e\u0434\u0438",
+  addIncome: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0434\u043e\u0445\u0456\u0434",
+  incomeType: "\u0422\u0438\u043f \u0434\u043e\u0445\u043e\u0434\u0443",
+  incomeCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f \u0434\u043e\u0445\u043e\u0434\u0443",
+  totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",
+  noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
+  noIncomes: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0445\u043e\u0434\u0456\u0432.",
+  noFilteredExpenses: "\u0417\u0430 \u043e\u0431\u0440\u0430\u043d\u0438\u043c\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0430\u043c\u0438 \u0432\u0438\u0442\u0440\u0430\u0442 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e.",
+  uah: "\u0433\u0440\u043d",
+  scopeTitle: "\u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u043e\u0431\u043b\u0456\u043a\u0443",
+  personalScope: "\u041e\u0441\u043e\u0431\u0438\u0441\u0442\u0438\u0439",
+  roomScopePrefix: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
+  roomBalances: "\u0411\u0430\u043b\u0430\u043d\u0441\u0438 \u043a\u0456\u043c\u043d\u0430\u0442",
+  noRoomsYet: "\u0412\u0438 \u0449\u0435 \u043d\u0435 \u0454 \u0443\u0447\u0430\u0441\u043d\u0438\u043a\u043e\u043c \u0436\u043e\u0434\u043d\u043e\u0457 \u043a\u0456\u043c\u043d\u0430\u0442\u0438.",
+  activeScope: "\u0410\u043a\u0442\u0438\u0432\u043d\u0438\u0439 \u043a\u043e\u043d\u0442\u0435\u043a\u0441\u0442",
 };
 
 const categories: Array<{ id: CategoryId; label: string }> = [
-  { id: "groceries", label: "Продукти" },
-  { id: "transport", label: "Транспорт" },
-  { id: "entertainment", label: "Розваги" },
-  { id: "subscriptions", label: "Підписки" },
-  { id: "coffee", label: "Кафе" },
+  { id: "groceries", label: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u0438" },
+  { id: "transport", label: "\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442" },
+  { id: "entertainment", label: "\u0420\u043e\u0437\u0432\u0430\u0433\u0438 \u0442\u0430 \u043a\u0430\u0444\u0435" },
+  { id: "subscriptions", label: "\u041f\u0456\u0434\u043f\u0438\u0441\u043a\u0438" },
+  { id: "utilities", label: "\u041a\u043e\u043c\u0443\u043d\u0430\u043b\u044c\u043d\u0456" },
+  { id: "auto", label: "\u0410\u0432\u0442\u043e" },
+  { id: "sport", label: "\u0421\u043f\u043e\u0440\u0442" },
+  { id: "medicine", label: "\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0430" },
+  { id: "gifts_guests", label: "\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043a\u0438 \u0456 \u0433\u043e\u0441\u0442\u0456" },
+  { id: "home_goods", label: "\u0422\u043e\u0432\u0430\u0440\u0438 \u0434\u043b\u044f \u0434\u043e\u043c\u0443" },
+  { id: "clothes_shoes", label: "\u041e\u0434\u044f\u0433 \u0442\u0430 \u0432\u0437\u0443\u0442\u0442\u044f" },
+  { id: "debts", label: "\u0411\u043e\u0440\u0433\u0438" },
+  { id: "other", label: "\u0406\u043d\u0448\u0456" },
 ];
 
 const expenseSources: Array<{ id: ExpenseSourceId; label: string }> = [
-  { id: "cash", label: "Готівка" },
-  { id: "card", label: "Банківська картка" },
+  { id: "cash", label: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" },
+  { id: "card", label: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u043a\u0430" },
 ];
 
 const incomeTypes: Array<{ id: IncomeTypeId; label: string }> = [
-  { id: "cash", label: "Готівка" },
-  { id: "card", label: "Банківська картка" },
+  { id: "cash", label: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" },
+  { id: "card", label: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u043a\u0430" },
 ];
 
 const incomeCategories: Array<{ id: IncomeCategoryId; label: string }> = [
-  { id: "salary", label: "Зарплата" },
-  { id: "part_time", label: "Підробіток" },
-  { id: "other", label: "Інші доходи" },
+  { id: "salary", label: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430" },
+  { id: "part_time", label: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a" },
+  { id: "other", label: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438" },
 ];
 
 const categoryLabelMap: Record<CategoryId, string> = {
-  groceries: "Продукти",
-  transport: "Транспорт",
-  entertainment: "Розваги",
-  subscriptions: "Підписки",
-  coffee: "Кафе",
+  groceries: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u0438",
+  transport: "\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442",
+  entertainment: "\u0420\u043e\u0437\u0432\u0430\u0433\u0438 \u0442\u0430 \u043a\u0430\u0444\u0435",
+  subscriptions: "\u041f\u0456\u0434\u043f\u0438\u0441\u043a\u0438",
+  utilities: "\u041a\u043e\u043c\u0443\u043d\u0430\u043b\u044c\u043d\u0456",
+  auto: "\u0410\u0432\u0442\u043e",
+  sport: "\u0421\u043f\u043e\u0440\u0442",
+  medicine: "\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0430",
+  gifts_guests: "\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043a\u0438 \u0456 \u0433\u043e\u0441\u0442\u0456",
+  home_goods: "\u0422\u043e\u0432\u0430\u0440\u0438 \u0434\u043b\u044f \u0434\u043e\u043c\u0443",
+  clothes_shoes: "\u041e\u0434\u044f\u0433 \u0442\u0430 \u0432\u0437\u0443\u0442\u0442\u044f",
+  debts: "\u0411\u043e\u0440\u0433\u0438",
+  other: "\u0406\u043d\u0448\u0456",
 };
 
 const incomeTypeLabelMap: Record<IncomeTypeId, string> = {
-  cash: "Готівка",
-  card: "Банківська картка",
+  cash: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
+  card: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u043a\u0430",
 };
 
 const incomeCategoryLabelMap: Record<IncomeCategoryId, string> = {
-  salary: "Зарплата",
-  part_time: "Підробіток",
-  other: "Інші доходи",
+  salary: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430",
+  part_time: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a",
+  other: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438",
 };
 
 const categoryLimits: Record<CategoryId, number> = {
@@ -159,19 +188,27 @@ const categoryLimits: Record<CategoryId, number> = {
   transport: 3000,
   entertainment: 2500,
   subscriptions: 800,
-  coffee: 1500,
+  utilities: 2500,
+  auto: 4000,
+  sport: 2000,
+  medicine: 3000,
+  gifts_guests: 2000,
+  home_goods: 3000,
+  clothes_shoes: 3000,
+  debts: 5000,
+  other: 1500,
 };
 
 const initialExpenses: Expense[] = [
-  { id: "1", name: "Сільпо", category: "groceries", source: "card", amount: 1240, date: "2026-03-10" },
+  { id: "1", name: "\u0421\u0456\u043b\u044c\u043f\u043e", category: "groceries", source: "card", amount: 1240, date: "2026-03-10" },
   { id: "2", name: "Bolt", category: "transport", source: "card", amount: 186, date: "2026-03-10" },
   { id: "3", name: "Monobank", category: "subscriptions", source: "card", amount: 219, date: "2026-03-09" },
-  { id: "4", name: "Coffee Lab", category: "coffee", source: "cash", amount: 145, date: "2026-03-09" },
+  { id: "4", name: "Coffee Lab", category: "entertainment", source: "cash", amount: 145, date: "2026-03-09" },
 ];
 
 const initialIncomes: Income[] = [
-  { id: "i1", name: "Зарплата", type: "card", category: "salary", amount: 42000, date: "2026-03-01" },
-  { id: "i2", name: "Фріланс", type: "cash", category: "part_time", amount: 8500, date: "2026-03-05" },
+  { id: "i1", name: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430", type: "card", category: "salary", amount: 42000, date: "2026-03-01" },
+  { id: "i2", name: "\u0424\u0440\u0456\u043b\u0430\u043d\u0441", type: "cash", category: "part_time", amount: 8500, date: "2026-03-05" },
 ];
 
 const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, source: expenseSources[0].id, amount: "", date: "" });
@@ -288,12 +325,17 @@ export default function Home() {
   const totalBalance = totalIncomeAll - totalSpentAll;
 
   const limitsByCategory = useMemo(() => {
+    const emptyTotals = categories.reduce((acc, category) => {
+      acc[category.id] = 0;
+      return acc;
+    }, {} as Record<CategoryId, number>);
+
     const totals = filteredExpenses.reduce<Record<CategoryId, number>>(
       (acc, expense) => {
         acc[expense.category] += expense.amount;
         return acc;
       },
-      { groceries: 0, transport: 0, entertainment: 0, subscriptions: 0, coffee: 0 },
+      emptyTotals,
     );
 
     return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
@@ -419,7 +461,7 @@ export default function Home() {
               <div className="expense-table">
                 {filteredExpenses.map((expense) => (
                   <div className="expense-row" key={expense.id}>
-                    <div><strong>{expense.name}</strong><p>{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "Готівка" : "Картка"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p></div>
+                    <div><strong>{expense.name}</strong><p>{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p></div>
                     <span>{mounted ? formatDate(expense.date) : expense.date}</span>
                     <strong>-{formatCurrency(expense.amount)}</strong>
                     <button className="row-action row-action-danger" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button>
