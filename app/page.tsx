@@ -1,6 +1,6 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { HouseholdMembersPanel } from "./components/household-members-panel";
 
@@ -84,6 +84,7 @@ const TXT = {
   tabRoom: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
   balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
   totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
+  incomeThisMonth: "\u0446\u044c\u043e\u0433\u043e \u043c\u0456\u0441\u044f\u0446\u044f",
   cashBalance: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
   cardBalance: "\u041a\u0430\u0440\u0442\u043a\u0430",
   addExpense: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443",
@@ -242,6 +243,7 @@ export default function Home() {
   const [categoryLimits, setCategoryLimits] = useState<Record<CategoryId, number>>(defaultCategoryLimits);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [activeScopeKey, setActiveScopeKey] = useState("personal");
+  const expenseAmountRef = useRef<HTMLInputElement | null>(null);
   const { data: session, status } = useSession();
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
 
@@ -325,6 +327,10 @@ export default function Home() {
   const totalSpentAll = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
   const totalSpentFiltered = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
   const totalIncomeAll = useMemo(() => incomes.reduce((sum, income) => sum + income.amount, 0), [incomes]);
+  const totalIncomeCurrentMonth = useMemo(() => {
+    const currentMonthKey = new Date().toISOString().slice(0, 7);
+    return incomes.filter((income) => income.date.startsWith(currentMonthKey)).reduce((sum, income) => sum + income.amount, 0);
+  }, [incomes]);
   const cashIncome = useMemo(() => incomes.filter((income) => income.type === "cash").reduce((sum, income) => sum + income.amount, 0), [incomes]);
   const cardIncome = useMemo(() => incomes.filter((income) => income.type === "card").reduce((sum, income) => sum + income.amount, 0), [incomes]);
   const cashSpent = useMemo(() => expenses.filter((expense) => expense.source === "cash").reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
@@ -401,6 +407,14 @@ export default function Home() {
     setCategoryLimits((prev) => ({ ...prev, [category]: nextValue }));
   };
 
+  const handleFabClick = () => {
+    setActiveTab("home");
+    requestAnimationFrame(() => {
+      expenseAmountRef.current?.focus();
+      expenseAmountRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  };
+
   if (status === "loading") return <main className="auth-shell"><div className="auth-card"><h1>{"\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u043a\u0430 \u0441\u0435\u0441\u0456\u0457..."}</h1></div></main>;
   if (!session?.user) return <main className="auth-shell"><div className="auth-card"><h1>{"\u041f\u043e\u0442\u0440\u0456\u0431\u0435\u043d \u0432\u0445\u0456\u0434"}</h1><p>{"\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044c \u0430\u0431\u043e \u0441\u0442\u0432\u043e\u0440\u0456\u0442\u044c \u0430\u043a\u0430\u0443\u043d\u0442, \u0449\u043e\u0431 \u043f\u0440\u043e\u0434\u043e\u0432\u0436\u0438\u0442\u0438."}</p><a className="button button-primary" href="/sign-in">{"\u0423\u0432\u0456\u0439\u0442\u0438"}</a><a className="button button-secondary" href="/sign-up">{"\u0420\u0435\u0454\u0441\u0442\u0440\u0430\u0446\u0456\u044f"}</a></div></main>;
 
@@ -434,7 +448,7 @@ export default function Home() {
           <article className="card">
             <p className="section-label">{TXT.balance}</p>
             <div className="balance-grid">
-              <div className="balance-item"><span>{TXT.totalBalance}</span><strong>{formatCurrency(totalBalance)}</strong></div>
+              <div className="balance-item balance-hero"><span className="balance-hero-label">{TXT.totalBalance}</span><strong className="balance-hero-amount">{formatCurrency(totalBalance)}</strong><p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p></div>
               <div className="balance-item"><span>{TXT.cashBalance}</span><strong>{formatCurrency(cashBalance)}</strong></div>
               <div className="balance-item"><span>{TXT.cardBalance}</span><strong>{formatCurrency(cardBalance)}</strong></div>
             </div>
@@ -447,7 +461,7 @@ export default function Home() {
               <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={expenseForm.name} onChange={(event) => setExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
               <label>{TXT.category}<select value={expenseForm.category} onChange={(event) => setExpenseForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
               <label>{TXT.expenseSource}<select value={expenseForm.source} onChange={(event) => setExpenseForm((prev) => ({ ...prev, source: event.target.value as ExpenseSourceId }))}>{expenseSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
-              <label>{TXT.amount}<input type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.amount}<input ref={expenseAmountRef} type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
               <label>{TXT.date}<input type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
               <button className="button button-primary" type="submit">{TXT.save}</button>
             </form>
@@ -546,6 +560,18 @@ export default function Home() {
           <HouseholdMembersPanel />
         </section>
       ) : null}
+
+      <button className="fab-action" type="button" aria-label={TXT.addExpense} title={TXT.addExpense} onClick={handleFabClick}>
+        +
+      </button>
     </main>
   );
 }
+
+
+
+
+
+
+
+
