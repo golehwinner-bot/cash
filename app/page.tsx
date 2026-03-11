@@ -3,11 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 
 type CategoryId = "groceries" | "transport" | "entertainment" | "subscriptions" | "coffee";
+type FilterCategoryId = CategoryId | "all";
+type AppTab = "home" | "expenses" | "income" | "settings";
+
+type IncomeTypeId = "cash" | "card";
+type IncomeCategoryId = "salary" | "part_time" | "other";
 
 type Expense = {
   id: string;
   name: string;
   category: CategoryId;
+  amount: number;
+  date: string;
+};
+
+type Income = {
+  id: string;
+  name: string;
+  type: IncomeTypeId;
+  category: IncomeCategoryId;
   amount: number;
   date: string;
 };
@@ -19,26 +33,102 @@ type ExpenseForm = {
   date: string;
 };
 
+type IncomeForm = {
+  name: string;
+  type: IncomeTypeId;
+  category: IncomeCategoryId;
+  amount: string;
+  date: string;
+};
+
+type ExpenseFilters = {
+  category: FilterCategoryId;
+  dateFrom: string;
+  dateTo: string;
+};
+
 const STORAGE_EXPENSES = "cashflow-expenses-v1";
-const STORAGE_BUDGET = "cashflow-budget-v1";
+const STORAGE_INCOMES = "cashflow-incomes-v1";
+
+const TXT = {
+  tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
+  tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
+  tabIncome: "\u0414\u043e\u0445\u0456\u0434",
+  tabSettings: "\u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f",
+  balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
+  totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
+  cashBalance: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
+  cardBalance: "\u041a\u0430\u0440\u0442\u043a\u0430",
+  addExpense: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443",
+  quickEntry: "\u0428\u0432\u0438\u0434\u043a\u0438\u0439 \u0437\u0430\u043f\u0438\u0441",
+  name: "\u041d\u0430\u0437\u0432\u0430",
+  namePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0410\u0422\u0411",
+  incomeNamePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0410\u0432\u0430\u043d\u0441",
+  category: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f",
+  amount: "\u0421\u0443\u043c\u0430",
+  date: "\u0414\u0430\u0442\u0430",
+  save: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438",
+  expensesTitle: "\u0423\u0441\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438",
+  filters: "\u0424\u0456\u043b\u044c\u0442\u0440\u0438",
+  periodSummary: "\u041f\u0456\u0434\u0441\u0443\u043c\u043e\u043a \u0437\u0430 \u043f\u0435\u0440\u0456\u043e\u0434",
+  records: "\u0437\u0430\u043f\u0438\u0441\u0456\u0432",
+  allCategories: "\u0423\u0441\u0456 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0457",
+  dateFrom: "\u0412\u0456\u0434",
+  dateTo: "\u0414\u043e",
+  clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
+  categoryLimits: "\u041b\u0456\u043c\u0456\u0442\u0438 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0439",
+  delete: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
+  incomeTitle: "\u0414\u043e\u0445\u043e\u0434\u0438",
+  addIncome: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0434\u043e\u0445\u0456\u0434",
+  incomeType: "\u0422\u0438\u043f \u0434\u043e\u0445\u043e\u0434\u0443",
+  incomeCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f \u0434\u043e\u0445\u043e\u0434\u0443",
+  totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",
+  settingsStub: "\u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f \u0434\u043e\u0434\u0430\u043c\u043e \u043d\u0430\u0441\u0442\u0443\u043f\u043d\u0438\u043c \u043a\u0440\u043e\u043a\u043e\u043c.",
+  noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
+  noIncomes: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0445\u043e\u0434\u0456\u0432.",
+  noFilteredExpenses: "\u0417\u0430 \u043e\u0431\u0440\u0430\u043d\u0438\u043c\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0430\u043c\u0438 \u0432\u0438\u0442\u0440\u0430\u0442 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e.",
+  uah: "\u0433\u0440\u043d",
+};
 
 const categories: Array<{ id: CategoryId; label: string }> = [
-  { id: "groceries", label: "Продукти" },
-  { id: "transport", label: "Транспорт" },
-  { id: "entertainment", label: "Розваги" },
-  { id: "subscriptions", label: "Підписки" },
-  { id: "coffee", label: "Кафе" },
+  { id: "groceries", label: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u0438" },
+  { id: "transport", label: "\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442" },
+  { id: "entertainment", label: "\u0420\u043e\u0437\u0432\u0430\u0433\u0438" },
+  { id: "subscriptions", label: "\u041f\u0456\u0434\u043f\u0438\u0441\u043a\u0438" },
+  { id: "coffee", label: "\u041a\u0430\u0444\u0435" },
+];
+
+const incomeTypes: Array<{ id: IncomeTypeId; label: string }> = [
+  { id: "cash", label: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" },
+  { id: "card", label: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u0430" },
+];
+
+const incomeCategories: Array<{ id: IncomeCategoryId; label: string }> = [
+  { id: "salary", label: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430" },
+  { id: "part_time", label: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a" },
+  { id: "other", label: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438" },
 ];
 
 const categoryLabelMap: Record<CategoryId, string> = {
-  groceries: "Продукти",
-  transport: "Транспорт",
-  entertainment: "Розваги",
-  subscriptions: "Підписки",
-  coffee: "Кафе",
+  groceries: "\u041f\u0440\u043e\u0434\u0443\u043a\u0442\u0438",
+  transport: "\u0422\u0440\u0430\u043d\u0441\u043f\u043e\u0440\u0442",
+  entertainment: "\u0420\u043e\u0437\u0432\u0430\u0433\u0438",
+  subscriptions: "\u041f\u0456\u0434\u043f\u0438\u0441\u043a\u0438",
+  coffee: "\u041a\u0430\u0444\u0435",
 };
 
-const budgetLimits: Record<CategoryId, number> = {
+const incomeTypeLabelMap: Record<IncomeTypeId, string> = {
+  cash: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
+  card: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u0430",
+};
+
+const incomeCategoryLabelMap: Record<IncomeCategoryId, string> = {
+  salary: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430",
+  part_time: "\u041f\u0456\u0434\u0440\u043e\u0431\u0456\u0442\u043e\u043a",
+  other: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438",
+};
+
+const categoryLimits: Record<CategoryId, number> = {
   groceries: 10000,
   transport: 3000,
   entertainment: 2500,
@@ -47,18 +137,20 @@ const budgetLimits: Record<CategoryId, number> = {
 };
 
 const initialExpenses: Expense[] = [
-  { id: "1", name: "Сільпо", category: "groceries", amount: 1240, date: "2026-03-10" },
+  { id: "1", name: "\u0421\u0456\u043b\u044c\u043f\u043e", category: "groceries", amount: 1240, date: "2026-03-10" },
   { id: "2", name: "Bolt", category: "transport", amount: 186, date: "2026-03-10" },
   { id: "3", name: "Monobank", category: "subscriptions", amount: 219, date: "2026-03-09" },
   { id: "4", name: "Coffee Lab", category: "coffee", amount: 145, date: "2026-03-09" },
 ];
 
-const defaultForm = (): ExpenseForm => ({
-  name: "",
-  category: categories[0].id,
-  amount: "",
-  date: "",
-});
+const initialIncomes: Income[] = [
+  { id: "i1", name: "\u0417\u0430\u0440\u043f\u043b\u0430\u0442\u0430", type: "card", category: "salary", amount: 42000, date: "2026-03-01" },
+  { id: "i2", name: "\u0424\u0440\u0456\u043b\u0430\u043d\u0441", type: "cash", category: "part_time", amount: 8500, date: "2026-03-05" },
+];
+
+const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, amount: "", date: "" });
+const defaultIncomeForm = (): IncomeForm => ({ name: "", type: incomeTypes[0].id, category: incomeCategories[0].id, amount: "", date: "" });
+const defaultFilters = (): ExpenseFilters => ({ category: "all", dateFrom: "", dateTo: "" });
 
 const currency = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -70,324 +162,346 @@ const formatDate = (value: string) =>
   new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "short" }).format(new Date(value));
 
 const toId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
 const formatPlain = (value: number) => value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
-  const [monthlyBudget, setMonthlyBudget] = useState(30000);
+  const [incomes, setIncomes] = useState<Income[]>(initialIncomes);
   const [mounted, setMounted] = useState(false);
-  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
-  const [form, setForm] = useState<ExpenseForm>(defaultForm);
+  const [expenseForm, setExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
+  const [incomeForm, setIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
+  const [filters, setFilters] = useState<ExpenseFilters>(defaultFilters);
 
   useEffect(() => {
-    const today = new Date();
-    const fallbackDate = today.toISOString().slice(0, 10);
-
-    setForm((prev) => ({ ...prev, date: prev.date || fallbackDate }));
+    const today = new Date().toISOString().slice(0, 10);
+    setExpenseForm((prev) => ({ ...prev, date: prev.date || today }));
+    setIncomeForm((prev) => ({ ...prev, date: prev.date || today }));
 
     try {
       const rawExpenses = localStorage.getItem(STORAGE_EXPENSES);
-      const rawBudget = localStorage.getItem(STORAGE_BUDGET);
+      const rawIncomes = localStorage.getItem(STORAGE_INCOMES);
 
       if (rawExpenses) {
         const parsed = JSON.parse(rawExpenses) as Expense[];
-        if (Array.isArray(parsed)) {
-          setExpenses(parsed);
-        }
+        if (Array.isArray(parsed)) setExpenses(parsed);
       }
 
-      if (rawBudget) {
-        const parsedBudget = Number(rawBudget);
-        if (Number.isFinite(parsedBudget) && parsedBudget >= 0) {
-          setMonthlyBudget(parsedBudget);
-        }
+      if (rawIncomes) {
+        const parsed = JSON.parse(rawIncomes) as Income[];
+        if (Array.isArray(parsed)) setIncomes(parsed);
       }
     } catch {
-      // Ignore broken localStorage values and keep defaults.
+      // ignore
     }
 
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!mounted) {
-      return;
-    }
-
+    if (!mounted) return;
     try {
       localStorage.setItem(STORAGE_EXPENSES, JSON.stringify(expenses));
-      localStorage.setItem(STORAGE_BUDGET, String(monthlyBudget));
+      localStorage.setItem(STORAGE_INCOMES, JSON.stringify(incomes));
     } catch {
-      // Ignore storage write errors (private mode / quota / disabled storage).
+      // ignore
     }
-  }, [expenses, monthlyBudget, mounted]);
+  }, [expenses, incomes, mounted]);
 
   const formatCurrency = (value: number) =>
-    mounted ? currency.format(value) : `${formatPlain(value)} грн`;
+    mounted ? currency.format(value) : `${formatPlain(value)} ${TXT.uah}`;
 
-  const formatBudgetNumber = (value: number) =>
-    mounted ? value.toLocaleString("uk-UA") : formatPlain(value);
+  const filteredExpenses = useMemo(
+    () =>
+      expenses.filter((expense) => {
+        const categoryPass = filters.category === "all" || expense.category === filters.category;
+        const fromPass = !filters.dateFrom || expense.date >= filters.dateFrom;
+        const toPass = !filters.dateTo || expense.date <= filters.dateTo;
+        return categoryPass && fromPass && toPass;
+      }),
+    [expenses, filters],
+  );
 
-  const formatDateSafe = (value: string) => (mounted ? formatDate(value) : value);
+  const totalSpentAll = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
+  const totalSpentFiltered = useMemo(() => filteredExpenses.reduce((sum, expense) => sum + expense.amount, 0), [filteredExpenses]);
+  const totalIncomeAll = useMemo(() => incomes.reduce((sum, income) => sum + income.amount, 0), [incomes]);
+  const cashIncome = useMemo(() => incomes.filter((income) => income.type === "cash").reduce((sum, income) => sum + income.amount, 0), [incomes]);
+  const cardIncome = useMemo(() => incomes.filter((income) => income.type === "card").reduce((sum, income) => sum + income.amount, 0), [incomes]);
+  const totalBalance = totalIncomeAll - totalSpentAll;
 
-  const totalSpent = useMemo(() => expenses.reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
-
-  const budgets = useMemo(() => {
-    const totals = expenses.reduce<Record<CategoryId, number>>(
+  const limitsByCategory = useMemo(() => {
+    const totals = filteredExpenses.reduce<Record<CategoryId, number>>(
       (acc, expense) => {
-        acc[expense.category] = (acc[expense.category] ?? 0) + expense.amount;
+        acc[expense.category] += expense.amount;
         return acc;
       },
-      {
-        groceries: 0,
-        transport: 0,
-        entertainment: 0,
-        subscriptions: 0,
-        coffee: 0,
-      },
+      { groceries: 0, transport: 0, entertainment: 0, subscriptions: 0, coffee: 0 },
     );
 
-    return (Object.keys(budgetLimits) as CategoryId[]).map((category) => {
-      const limit = budgetLimits[category];
-      const spent = totals[category] ?? 0;
+    return (Object.keys(categoryLimits) as CategoryId[]).map((category) => {
+      const limit = categoryLimits[category];
+      const spent = totals[category];
       const progress = Math.min(100, Math.round((spent / limit) * 100));
       return { category, spent, limit, progress };
     });
-  }, [expenses]);
+  }, [filteredExpenses]);
 
-  const resetForm = () => {
-    const today = new Date().toISOString().slice(0, 10);
-    setForm({ ...defaultForm(), date: today });
-    setEditingExpenseId(null);
-  };
-
-  const startEdit = (expense: Expense) => {
-    setEditingExpenseId(expense.id);
-    setForm({
-      name: expense.name,
-      category: expense.category,
-      amount: String(expense.amount),
-      date: expense.date,
-    });
-  };
-
-  const handleDelete = (expenseId: string) => {
-    setExpenses((prev) => prev.filter((expense) => expense.id !== expenseId));
-    if (editingExpenseId === expenseId) {
-      resetForm();
-    }
-  };
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddExpense = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const amountValue = Number(form.amount);
-    if (!form.name.trim() || !form.category || !form.date || !amountValue || amountValue <= 0) {
-      return;
-    }
-
-    if (editingExpenseId) {
-      setExpenses((prev) =>
-        prev.map((expense) =>
-          expense.id === editingExpenseId
-            ? {
-                ...expense,
-                name: form.name.trim(),
-                category: form.category,
-                amount: amountValue,
-                date: form.date,
-              }
-            : expense,
-        ),
-      );
-      resetForm();
-      return;
-    }
+    const amountValue = Number(expenseForm.amount);
+    if (!expenseForm.name.trim() || !expenseForm.date || !amountValue || amountValue <= 0) return;
 
     const next: Expense = {
       id: toId(),
-      name: form.name.trim(),
-      category: form.category,
+      name: expenseForm.name.trim(),
+      category: expenseForm.category,
       amount: amountValue,
-      date: form.date,
+      date: expenseForm.date,
     };
 
     setExpenses((prev) => [next, ...prev]);
-    setForm((prev) => ({ ...prev, name: "", amount: "" }));
+    setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
+  };
+
+  const handleAddIncome = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const amountValue = Number(incomeForm.amount);
+    if (!incomeForm.name.trim() || !incomeForm.date || !amountValue || amountValue <= 0) return;
+
+    const next: Income = {
+      id: toId(),
+      name: incomeForm.name.trim(),
+      type: incomeForm.type,
+      category: incomeForm.category,
+      amount: amountValue,
+      date: incomeForm.date,
+    };
+
+    setIncomes((prev) => [next, ...prev]);
+    setIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+  };
+
+  const handleDeleteExpense = (id: string) => {
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+  };
+
+  const handleDeleteIncome = (id: string) => {
+    setIncomes((prev) => prev.filter((income) => income.id !== id));
   };
 
   return (
-    <main className="shell">
-      <section className="hero">
-        <div className="hero-copy">
-          <p className="eyebrow">Cashflow Compass</p>
-          <div className="hero-actions">
-            <button className="button button-primary" type="button">
-              Додати витрату
-            </button>
-            <button className="button button-secondary" type="button">
-              Переглянути аналітику
-            </button>
-          </div>
-          <div className="budget-control">
-            <label htmlFor="monthlyBudget">Бюджет на місяць</label>
-            <div className="budget-input">
-              <input
-                id="monthlyBudget"
-                type="number"
-                min="0"
-                step="100"
-                value={monthlyBudget}
-                onChange={(event) => setMonthlyBudget(Number(event.target.value))}
-              />
-              <span>грн</span>
-            </div>
-          </div>
-        </div>
-      </section>
+    <main className="app-shell">
+      <nav className="tab-nav" aria-label="Primary">
+        <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
+        <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
+        <button className={`tab-btn ${activeTab === "income" ? "active" : ""}`} onClick={() => setActiveTab("income")} type="button">{TXT.tabIncome}</button>
+        <button className={`tab-btn ${activeTab === "settings" ? "active" : ""}`} onClick={() => setActiveTab("settings")} type="button">{TXT.tabSettings}</button>
+      </nav>
 
-      <section className="content-grid">
-        <div className="column">
-          <article className="panel">
-            <div className="panel-head">
-              <div>
-                <p className="section-label">{editingExpenseId ? "Редагувати витрату" : "Додати витрату"}</p>
-                <h2>{editingExpenseId ? "Оновлення запису" : "Швидкий запис"}</h2>
+      {activeTab === "home" ? (
+        <section className="tab-page">
+          <article className="card">
+            <p className="section-label">{TXT.balance}</p>
+            <div className="balance-grid">
+              <div className="balance-item">
+                <span>{TXT.totalBalance}</span>
+                <strong>{formatCurrency(totalBalance)}</strong>
+              </div>
+              <div className="balance-item">
+                <span>{TXT.cashBalance}</span>
+                <strong>{formatCurrency(cashIncome)}</strong>
+              </div>
+              <div className="balance-item">
+                <span>{TXT.cardBalance}</span>
+                <strong>{formatCurrency(cardIncome)}</strong>
               </div>
             </div>
+          </article>
 
-            <form className="expense-form" onSubmit={handleSubmit}>
+          <article className="card">
+            <p className="section-label">{TXT.addExpense}</p>
+            <h2>{TXT.quickEntry}</h2>
+
+            <form className="expense-form" onSubmit={handleAddExpense}>
               <label>
-                Назва
-                <input
-                  type="text"
-                  placeholder="Наприклад, АТБ"
-                  value={form.name}
-                  onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-                  required
-                />
+                {TXT.name}
+                <input type="text" placeholder={TXT.namePlaceholder} value={expenseForm.name} onChange={(event) => setExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required />
               </label>
 
               <label>
-                Категорія
-                <select
-                  value={form.category}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))
-                  }
-                >
+                {TXT.category}
+                <select value={expenseForm.category} onChange={(event) => setExpenseForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))}>
                   {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
+                    <option key={category.id} value={category.id}>{category.label}</option>
                   ))}
                 </select>
               </label>
 
               <label>
-                Сума
-                <input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="0"
-                  value={form.amount}
-                  onChange={(event) => setForm((prev) => ({ ...prev, amount: event.target.value }))}
-                  required
-                />
+                {TXT.amount}
+                <input type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required />
               </label>
 
               <label>
-                Дата
-                <input
-                  type="date"
-                  value={form.date}
-                  onChange={(event) => setForm((prev) => ({ ...prev, date: event.target.value }))}
-                  required
-                />
+                {TXT.date}
+                <input type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required />
               </label>
 
-              <div className="form-actions">
-                <button className="button button-primary" type="submit">
-                  {editingExpenseId ? "Оновити" : "Зберегти"}
-                </button>
-                {editingExpenseId ? (
-                  <button className="button button-secondary" type="button" onClick={resetForm}>
-                    Скасувати
-                  </button>
-                ) : null}
-              </div>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
             </form>
           </article>
+        </section>
+      ) : null}
 
-          <article className="panel panel-wide">
-            <div className="panel-head">
-              <div>
-                <p className="section-label">Останні витрати</p>
-                <h2>Стрічка транзакцій</h2>
+      {activeTab === "expenses" ? (
+        <section className="tab-page">
+          <article className="card">
+            <p className="section-label">{TXT.expensesTitle}</p>
+            <div className="filters-card">
+              <p className="section-label">{TXT.filters}</p>
+              <div className="filters-grid">
+                <label>
+                  {TXT.category}
+                  <select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value as FilterCategoryId }))}>
+                    <option value="all">{TXT.allCategories}</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>{category.label}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  {TXT.dateFrom}
+                  <input type="date" value={filters.dateFrom} onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))} />
+                </label>
+
+                <label>
+                  {TXT.dateTo}
+                  <input type="date" value={filters.dateTo} onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))} />
+                </label>
               </div>
-              <button className="text-button" type="button">
-                Усі записи
-              </button>
+
+              <div className="filters-footer">
+                <p className="summary-pill">{TXT.periodSummary}: <strong>{formatCurrency(totalSpentFiltered)}</strong> ({filteredExpenses.length} {TXT.records})</p>
+                <button className="text-button" type="button" onClick={() => setFilters(defaultFilters())}>{TXT.clearFilters}</button>
+              </div>
             </div>
 
-            <div className="expense-table">
-              {expenses.map((expense) => (
-                <div className="expense-row" key={expense.id}>
-                  <div>
-                    <strong>{expense.name}</strong>
-                    <p>{categoryLabelMap[expense.category]}</p>
+            {filteredExpenses.length === 0 ? (
+              <p className="empty-line">{expenses.length === 0 ? TXT.noExpenses : TXT.noFilteredExpenses}</p>
+            ) : (
+              <div className="expense-table">
+                {filteredExpenses.map((expense) => (
+                  <div className="expense-row" key={expense.id}>
+                    <div>
+                      <strong>{expense.name}</strong>
+                      <p>{categoryLabelMap[expense.category]}</p>
+                    </div>
+                    <span>{mounted ? formatDate(expense.date) : expense.date}</span>
+                    <strong>-{formatCurrency(expense.amount)}</strong>
+                    <button className="row-action row-action-danger" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button>
                   </div>
-                  <span>{formatDateSafe(expense.date)}</span>
-                  <strong>-{formatCurrency(expense.amount)}</strong>
-                  <div className="row-actions">
-                    <button className="row-action" type="button" onClick={() => startEdit(expense)}>
-                      Редагувати
-                    </button>
-                    <button
-                      className="row-action row-action-danger"
-                      type="button"
-                      onClick={() => handleDelete(expense.id)}
-                    >
-                      Видалити
-                    </button>
+                ))}
+              </div>
+            )}
+          </article>
+
+          <article className="card">
+            <p className="section-label">{TXT.categoryLimits}</p>
+            <div className="budget-list">
+              {limitsByCategory.map((budget) => (
+                <div className="budget-card" key={budget.category}>
+                  <div className="budget-copy">
+                    <strong>{categoryLabelMap[budget.category]}</strong>
+                    <span>{formatPlain(budget.spent)} / {formatPlain(budget.limit)} {TXT.uah}</span>
+                  </div>
+                  <div className="budget-bar">
+                    <div style={{ width: `${budget.progress}%` }} />
                   </div>
                 </div>
               ))}
             </div>
           </article>
-        </div>
+        </section>
+      ) : null}
 
-        <article className="panel">
-          <div className="panel-head">
-            <div>
-              <p className="section-label">Бюджети</p>
-              <h2>Ліміти за категоріями</h2>
-            </div>
-          </div>
+      {activeTab === "income" ? (
+        <section className="tab-page">
+          <article className="card">
+            <p className="section-label">{TXT.addIncome}</p>
+            <h2>{TXT.incomeTitle}</h2>
 
-          <div className="budget-list">
-            {budgets.map((budget) => (
-              <div className="budget-card" key={budget.category}>
-                <div className="budget-copy">
-                  <strong>{categoryLabelMap[budget.category]}</strong>
-                  <span>
-                    {formatBudgetNumber(budget.spent)} / {formatBudgetNumber(budget.limit)} грн
-                  </span>
-                </div>
-                <div className="budget-bar">
-                  <div style={{ width: `${budget.progress}%` }} />
-                </div>
+            <form className="income-form" onSubmit={handleAddIncome}>
+              <label>
+                {TXT.name}
+                <input type="text" placeholder={TXT.incomeNamePlaceholder} value={incomeForm.name} onChange={(event) => setIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required />
+              </label>
+
+              <label>
+                {TXT.incomeType}
+                <select value={incomeForm.type} onChange={(event) => setIncomeForm((prev) => ({ ...prev, type: event.target.value as IncomeTypeId }))}>
+                  {incomeTypes.map((type) => (
+                    <option key={type.id} value={type.id}>{type.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                {TXT.incomeCategory}
+                <select value={incomeForm.category} onChange={(event) => setIncomeForm((prev) => ({ ...prev, category: event.target.value as IncomeCategoryId }))}>
+                  {incomeCategories.map((category) => (
+                    <option key={category.id} value={category.id}>{category.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label>
+                {TXT.amount}
+                <input type="number" min="1" step="1" placeholder="0" value={incomeForm.amount} onChange={(event) => setIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required />
+              </label>
+
+              <label>
+                {TXT.date}
+                <input type="date" value={incomeForm.date} onChange={(event) => setIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required />
+              </label>
+
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
+
+          <article className="card">
+            <p className="section-label">{TXT.totalIncome}</p>
+            <p className="summary-pill"><strong>{formatCurrency(totalIncomeAll)}</strong></p>
+
+            {incomes.length === 0 ? (
+              <p className="empty-line">{TXT.noIncomes}</p>
+            ) : (
+              <div className="income-table">
+                {incomes.map((income) => (
+                  <div className="income-row" key={income.id}>
+                    <div>
+                      <strong>{income.name}</strong>
+                      <p>{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]}</p>
+                    </div>
+                    <span>{mounted ? formatDate(income.date) : income.date}</span>
+                    <strong>+{formatCurrency(income.amount)}</strong>
+                    <button className="row-action row-action-danger" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </article>
-      </section>
+            )}
+          </article>
+        </section>
+      ) : null}
 
-      {expenses.length === 0 ? (
-        <section className="empty-state">
-          <p>Поки що немає витрат. Додай першу транзакцію вище.</p>
+      {activeTab === "settings" ? (
+        <section className="tab-page single">
+          <article className="card">
+            <p className="section-label">{TXT.tabSettings}</p>
+            <p className="empty-line">{TXT.settingsStub}</p>
+          </article>
         </section>
       ) : null}
     </main>
