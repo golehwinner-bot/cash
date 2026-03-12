@@ -3,6 +3,24 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { HouseholdMembersPanel } from "./components/household-members-panel";
+import {
+  Bus,
+  Car,
+  CircleHelp,
+  CreditCard,
+  Dumbbell,
+  Gift,
+  HandCoins,
+  HeartPulse,
+  House,
+  Lightbulb,
+  Popcorn,
+  Repeat,
+  Shirt,
+  ShoppingCart,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 
 type CategoryId =
   | "groceries"
@@ -178,6 +196,21 @@ const categoryLabelMap: Record<CategoryId, string> = {
   other: "\u0406\u043d\u0448\u0456",
 };
 
+const categoryVisualMap: Record<CategoryId, { color: string; icon: LucideIcon }> = {
+  groceries: { color: "var(--cat-groceries)", icon: ShoppingCart },
+  transport: { color: "var(--cat-transport)", icon: Bus },
+  entertainment: { color: "var(--cat-entertainment)", icon: Popcorn },
+  subscriptions: { color: "#38BDF8", icon: Repeat },
+  utilities: { color: "var(--cat-utilities)", icon: Lightbulb },
+  auto: { color: "#60A5FA", icon: Car },
+  sport: { color: "#A78BFA", icon: Dumbbell },
+  medicine: { color: "var(--cat-health)", icon: HeartPulse },
+  gifts_guests: { color: "var(--cat-shopping)", icon: Gift },
+  home_goods: { color: "var(--cat-home)", icon: House },
+  clothes_shoes: { color: "#F472B6", icon: Shirt },
+  debts: { color: "#F87171", icon: HandCoins },
+  other: { color: "#9CA3AF", icon: CircleHelp },
+};
 const incomeTypeLabelMap: Record<IncomeTypeId, string> = {
   cash: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
   card: "\u0411\u0430\u043d\u043a\u0456\u0432\u0441\u044c\u043a\u0430 \u043a\u0430\u0440\u0442\u043a\u0430",
@@ -358,6 +391,9 @@ export default function Home() {
       const spent = totals[category];
       const progress = limit > 0 ? Math.min(100, Math.round((spent / limit) * 100)) : 0;
       return { category, spent, limit, progress };
+    }).sort((a, b) => {
+      if (b.spent !== a.spent) return b.spent - a.spent;
+      return categoryLabelMap[a.category].localeCompare(categoryLabelMap[b.category], "uk");
     });
   }, [filteredExpenses, categoryLimits]);
 
@@ -448,9 +484,9 @@ export default function Home() {
           <article className="card">
             <p className="section-label">{TXT.balance}</p>
             <div className="balance-grid">
-              <div className="balance-item balance-hero"><span className="balance-hero-label">{TXT.totalBalance}</span><strong className="balance-hero-amount">{formatCurrency(totalBalance)}</strong><p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p></div>
-              <div className="balance-item"><span>{TXT.cashBalance}</span><strong>{formatCurrency(cashBalance)}</strong></div>
-              <div className="balance-item"><span>{TXT.cardBalance}</span><strong>{formatCurrency(cardBalance)}</strong></div>
+              <div className="balance-item balance-hero"><span className="balance-hero-label">{TXT.totalBalance}</span><strong className="balance-hero-amount" style={{ fontSize: "clamp(84px, 9vw, 112px)", lineHeight: 0.9, fontWeight: 700 }}>{formatCurrency(totalBalance)}</strong><p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p></div>
+              <div className="balance-item"><span className="balance-item-label"><Wallet size={16} /> {TXT.cashBalance}</span><strong>{formatCurrency(cashBalance)}</strong></div>
+              <div className="balance-item"><span className="balance-item-label"><CreditCard size={16} /> {TXT.cardBalance}</span><strong>{formatCurrency(cardBalance)}</strong></div>
             </div>
           </article>
 
@@ -502,7 +538,7 @@ export default function Home() {
             <div className="budget-list">
               {limitsByCategory.map((budget) => (
                 <div className="budget-card" key={budget.category}>
-                  <div className="budget-copy"><strong>{categoryLabelMap[budget.category]}</strong><span>{formatPlain(budget.spent)} / {formatPlain(budget.limit)} {TXT.uah}</span></div>
+                  <div className="budget-copy"><strong className="budget-category-name">{(() => { const Icon = categoryVisualMap[budget.category].icon; return <Icon size={16} color={categoryVisualMap[budget.category].color} />; })()}<span>{categoryLabelMap[budget.category]}</span></strong><span>{formatPlain(budget.spent)} / {formatPlain(budget.limit)} {TXT.uah}</span></div>
                   <label className="budget-input">
                     <span>{TXT.limit}</span>
                     <input
@@ -513,7 +549,7 @@ export default function Home() {
                       onChange={(event) => handleCategoryLimitChange(budget.category, event.target.value)}
                     />
                   </label>
-                  <div className="budget-bar"><div style={{ width: `${budget.progress}%` }} /></div>
+                  <div className="budget-bar"><div style={{ width: `${budget.progress}%`, background: categoryVisualMap[budget.category].color }} /></div>
                 </div>
               ))}
             </div>
@@ -567,6 +603,13 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
 
 
 

@@ -260,7 +260,7 @@ button:focus-visible {
 
 .balance-hero {
   grid-column: 1 / -1;
-  min-height: 172px;
+  min-height: 148px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -294,9 +294,9 @@ button:focus-visible {
 }
 
 .balance-hero-amount {
-  font-size: 64px;
+  font-size: 92px;
   font-weight: 700;
-  line-height: 1;
+  line-height: 0.95;
   letter-spacing: -0.03em;
   color: #f8fafc;
 }
@@ -489,34 +489,6 @@ button:focus-visible {
   background: var(--cat-groceries);
 }
 
-.budget-card:nth-child(1) .budget-bar div {
-  background: var(--cat-groceries);
-}
-
-.budget-card:nth-child(2) .budget-bar div {
-  background: var(--cat-transport);
-}
-
-.budget-card:nth-child(3) .budget-bar div {
-  background: var(--cat-entertainment);
-}
-
-.budget-card:nth-child(5) .budget-bar div {
-  background: var(--cat-utilities);
-}
-
-.budget-card:nth-child(9) .budget-bar div {
-  background: var(--cat-shopping);
-}
-
-.budget-card:nth-child(10) .budget-bar div {
-  background: var(--cat-home);
-}
-
-.budget-card:nth-child(8) .budget-bar div {
-  background: var(--cat-health);
-}
-
 .budget-input {
   display: inline-flex;
   align-items: center;
@@ -614,7 +586,7 @@ select option {
   }
 
   .balance-hero {
-    min-height: 184px;
+    min-height: 148px;
   }
 
   .expense-row,
@@ -712,4 +684,26 @@ select option {
   color: #22c55e;
   font-weight: 700;
 }
+
+
+
+
+.budget-category-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.budget-category-name span {
+  color: #f3f4f6;
+}
+
+
+
+
+.balance-hero .balance-hero-amount {
+  font-size: clamp(84px, 9vw, 112px) !important;
+}
+
+
 
