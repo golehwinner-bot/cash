@@ -1324,3 +1324,90 @@ body[data-theme="light"] .settings-value {
 body[data-theme="light"] .tab-btn.active {
   color: #14532d;
 }
+
+/* Accent gradient refinements (dark + light) */
+.button-primary {
+  box-shadow: 0 10px 22px rgba(22, 163, 74, 0.2);
+}
+
+.balance-hero {
+  background:
+    radial-gradient(130% 110% at 0% 50%, rgba(34, 197, 94, 0.24), transparent 55%),
+    radial-gradient(120% 100% at 100% 0%, rgba(56, 189, 248, 0.12), transparent 58%),
+    linear-gradient(135deg, rgba(17, 24, 39, 0.94) 0%, rgba(15, 23, 42, 0.98) 70%);
+  box-shadow: inset 0 1px 0 rgba(74, 222, 128, 0.08), 0 14px 28px rgba(2, 6, 23, 0.28);
+}
+
+body[data-theme="light"] .button-primary {
+  color: #f0fdf4;
+  background: linear-gradient(120deg, #16a34a 0%, #22c55e 68%, #4ade80 100%);
+  box-shadow: 0 10px 20px rgba(22, 163, 74, 0.2);
+}
+
+body[data-theme="light"] .button-primary:hover {
+  background: linear-gradient(120deg, #15803d 0%, #16a34a 66%, #22c55e 100%);
+}
+
+body[data-theme="light"] .tab-btn.active,
+body[data-theme="light"] .theme-btn.active {
+  color: #14532d;
+  border-color: rgba(22, 163, 74, 0.42);
+  background: linear-gradient(110deg, rgba(34, 197, 94, 0.3) 0%, rgba(22, 163, 74, 0.15) 100%);
+}
+
+body[data-theme="light"] .theme-btn {
+  color: #334155;
+  border-color: #bfd0e6;
+}
+
+body[data-theme="light"] .theme-btn.active {
+  color: #14532d;
+  font-weight: 700;
+}
+
+body[data-theme="light"] .theme-btn svg {
+  color: currentColor;
+}
+
+body[data-theme="light"] .balance-item.balance-hero {
+  background:
+    radial-gradient(130% 110% at 0% 50%, rgba(34, 197, 94, 0.26), transparent 55%),
+    radial-gradient(120% 100% at 100% 0%, rgba(56, 189, 248, 0.12), transparent 58%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 253, 244, 0.98) 70%);
+  border-color: rgba(22, 163, 74, 0.3);
+  box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.22), 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+body[data-theme="light"] .balance-hero-meta {
+  color: #16a34a;
+}
+
+/* Light theme polish for auth + room controls */
+body[data-theme="light"] .auth-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.98) 100%);
+  border-color: #d9e2ef;
+}
+
+body[data-theme="light"] .auth-card h1 {
+  color: #0f172a;
+}
+
+body[data-theme="light"] .auth-card p {
+  color: #475569;
+}
+
+body[data-theme="light"] .button-secondary {
+  background: #ffffff;
+  color: #1e293b;
+  border-color: #cbd5e1;
+}
+
+body[data-theme="light"] .button-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+}
+
+body[data-theme="light"] .invite-controls {
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.96) 0%, rgba(241, 245, 249, 0.96) 100%);
+  border: 1px solid #cbd5e1;
+}

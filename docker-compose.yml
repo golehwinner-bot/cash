@@ -31,6 +31,7 @@
       NEXTAUTH_URL: http://localhost:3000
       CHOKIDAR_USEPOLLING: "true"
       WATCHPACK_POLLING: "true"
+      NEXT_DISABLE_TURBOPACK: "1"
     ports:
       - "3000:3000"
     volumes:
@@ -40,4 +41,7 @@
 
 volumes:
   postgres_data:
+
+
+
 
