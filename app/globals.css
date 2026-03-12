@@ -485,9 +485,63 @@ button:focus-visible {
 
 .expense-row,
 .income-row {
-  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  grid-template-columns: 1fr;
+}
+
+.entry-top,
+.entry-bottom {
+  display: flex;
   align-items: center;
-  column-gap: 10px;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.entry-title {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.06rem;
+  color: #f8fafc;
+}
+
+.entry-title span {
+  display: inline-block;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.entry-title-marquee {
+  overflow: hidden;
+}
+
+.entry-title-marquee span {
+  text-overflow: clip;
+  padding-right: 22px;
+  animation: entry-marquee 8s linear infinite;
+}
+
+.entry-date {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  color: #9ca3af;
+}
+
+.entry-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.25;
+  color: #94a3b8;
+}
+
+.entry-amount {
+  color: #f3f4f6;
+  font-size: 1.2rem;
+}
+
+.entry-amount-income {
+  color: #86efac;
 }
 
 .expense-row p,
@@ -513,15 +567,37 @@ button:focus-visible {
   border-color: rgba(148, 163, 184, 0.32);
 }
 
+.row-action-compact {
+  min-height: 32px;
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .row-action-danger {
-  color: #fecaca;
-  border-color: rgba(239, 68, 68, 0.35);
+  color: #fee2e2;
+  border-color: rgba(239, 68, 68, 0.62);
+  background: rgba(185, 28, 28, 0.32);
 }
 
 .row-action-danger:hover {
-  color: #fee2e2;
-  border-color: rgba(239, 68, 68, 0.52);
-  background: rgba(127, 29, 29, 0.22);
+  color: #ffffff;
+  border-color: rgba(248, 113, 113, 0.85);
+  background: rgba(220, 38, 38, 0.5);
+}
+
+@keyframes entry-marquee {
+  0%,
+  12% {
+    transform: translateX(0);
+  }
+  45%,
+  70% {
+    transform: translateX(-22%);
+  }
+  100% {
+    transform: translateX(0);
+  }
 }
 
 .budget-copy {

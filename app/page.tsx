@@ -556,10 +556,7 @@ export default function Home() {
               <div className="expense-table expense-table-scroll">
                 {filteredExpenses.map((expense) => (
                   <div className="expense-row" key={expense.id}>
-                    <div><strong>{expense.name}</strong><p>{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p></div>
-                    <span>{mounted ? formatDate(expense.date) : expense.date}</span>
-                    <strong>-{formatCurrency(expense.amount)}</strong>
-                    <button className="row-action row-action-danger" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button>
+                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button></div>
                   </div>
                 ))}
               </div>
@@ -618,13 +615,10 @@ export default function Home() {
             <p className="section-label">{TXT.totalIncome}</p>
             <p className="summary-pill"><strong>{formatCurrency(totalIncomeAll)}</strong></p>
             {incomes.length === 0 ? <p className="empty-line">{TXT.noIncomes}</p> : (
-              <div className="income-table">
+              <div className="income-table expense-table-scroll">
                 {incomes.map((income) => (
                   <div className="income-row" key={income.id}>
-                    <div><strong>{income.name}</strong><p>{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p></div>
-                    <span>{mounted ? formatDate(income.date) : income.date}</span>
-                    <strong>+{formatCurrency(income.amount)}</strong>
-                    <button className="row-action row-action-danger" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button>
+                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button></div>
                   </div>
                 ))}
               </div>
@@ -645,5 +639,4 @@ export default function Home() {
     </main>
   );
 }
-
 
