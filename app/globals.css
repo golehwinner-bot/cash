@@ -82,18 +82,19 @@ button:focus-visible {
 
 .top-controls {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: 10px;
   margin-bottom: 14px;
 }
 
 .top-bar {
-  order: 1;
+  order: 2;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 8px 14px;
+  padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgba(15, 23, 42, 0.72);
@@ -107,14 +108,14 @@ button:focus-visible {
 }
 
 .scope-card {
-  order: 2;
-  width: 100%;
+  order: 1;
+  width: min(560px, 100%);
   padding: 12px;
 }
 
 .scope-inline {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-columns: 72px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
 }
@@ -606,9 +607,11 @@ select option {
   }
 
   .scope-inline {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+}
 
   .filters-footer {
     flex-direction: column;
@@ -720,8 +723,11 @@ body {
 }
 
 .top-controls {
-  gap: 8px !important;
-  margin-bottom: 10px !important;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .top-bar,
@@ -731,12 +737,16 @@ body {
 }
 
 .scope-card {
-  padding: 10px !important;
+  order: 1;
+  width: min(560px, 100%);
+  padding: 12px;
 }
 
 .scope-inline {
-  grid-template-columns: 1fr !important;
-  gap: 8px !important;
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
 }
 
 .tab-nav {
@@ -853,3 +863,49 @@ body {
 
 
 
+
+
+
+
+
+/* Header row alignment: scope left, user right */
+.top-controls {
+  align-items: stretch !important;
+}
+
+.scope-card {
+  width: min(280px, 100%) !important;
+  padding: 8px 10px !important;
+  min-height: 62px !important;
+}
+
+.scope-inline {
+  grid-template-columns: 1fr !important;
+  gap: 0 !important;
+}
+
+.scope-inline .section-label {
+  display: none !important;
+}
+
+.scope-inline select {
+  min-height: 44px !important;
+}
+
+.top-bar {
+  min-height: 62px !important;
+  padding: 8px 10px !important;
+  align-self: stretch !important;
+}
+
+.top-bar span {
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-bar .row-action {
+  min-height: 36px !important;
+  padding: 4px 10px !important;
+}
