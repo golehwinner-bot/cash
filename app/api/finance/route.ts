@@ -170,6 +170,7 @@ export async function GET(request: Request) {
         source: expenseSourceFromDb(item.source),
         amount: item.amount,
         date: formatDateIso(item.date),
+        createdById: item.createdById,
         createdByName: item.createdBy.name || item.createdBy.email || undefined,
       })),
       incomes: incomes.map((item) => ({
@@ -179,6 +180,7 @@ export async function GET(request: Request) {
         category: incomeCategoryFromDb(item.category),
         amount: item.amount,
         date: formatDateIso(item.date),
+        createdById: item.createdById,
         createdByName: item.createdBy.name || item.createdBy.email || undefined,
       })),
       limits: limits.map((item) => ({
@@ -244,6 +246,7 @@ export async function POST(request: Request) {
             source: expenseSourceFromDb(created.source),
             amount: created.amount,
             date: formatDateIso(created.date),
+            createdById: created.createdById,
             createdByName: created.createdBy.name || created.createdBy.email || undefined,
           },
         },
@@ -284,6 +287,7 @@ export async function POST(request: Request) {
             category: incomeCategoryFromDb(created.category),
             amount: created.amount,
             date: formatDateIso(created.date),
+            createdById: created.createdById,
             createdByName: created.createdBy.name || created.createdBy.email || undefined,
           },
         },
@@ -312,15 +316,125 @@ export async function PATCH(request: Request) {
 
     const body = await request.json().catch(() => ({}));
     const scopeKey = String(body.scopeKey ?? "personal");
+    const kind = String(body.kind ?? "");
+
+    const scope = await resolveScopeHouseholdId(resolved.userId, scopeKey);
+    if ("error" in scope) return scope.error;
+
+    if (kind === "expense") {
+      const id = String(body.id ?? "").trim();
+      const name = String(body.name ?? "").trim();
+      const category = String(body.category ?? "other");
+      const source = String(body.source ?? "card");
+      const amount = Number(body.amount ?? 0);
+      const date = String(body.date ?? "");
+
+      if (!id || !name || !date || !Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({ error: "Invalid expense payload." }, { status: 400 });
+      }
+
+      const updated = await prisma.expense.updateMany({
+        where: {
+          id,
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+        data: {
+          title: name,
+          category,
+          source: expenseSourceToDb(source),
+          amount: Math.round(amount),
+          date: new Date(date),
+        },
+      });
+
+      if (updated.count === 0) {
+        return NextResponse.json({ error: "Лише автор може редагувати цей запис." }, { status: 403 });
+      }
+
+      const item = await prisma.expense.findUnique({
+        where: { id },
+        include: { createdBy: { select: { name: true, email: true } } },
+      });
+
+      if (!item) {
+        return NextResponse.json({ error: "Record not found." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        item: {
+          id: item.id,
+          name: item.title,
+          category: item.category,
+          source: expenseSourceFromDb(item.source),
+          amount: item.amount,
+          date: formatDateIso(item.date),
+          createdById: item.createdById,
+          createdByName: item.createdBy.name || item.createdBy.email || undefined,
+        },
+      });
+    }
+
+    if (kind === "income") {
+      const id = String(body.id ?? "").trim();
+      const name = String(body.name ?? "").trim();
+      const type = String(body.type ?? "card");
+      const category = String(body.category ?? "other");
+      const amount = Number(body.amount ?? 0);
+      const date = String(body.date ?? "");
+
+      if (!id || !name || !date || !Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({ error: "Invalid income payload." }, { status: 400 });
+      }
+
+      const updated = await prisma.income.updateMany({
+        where: {
+          id,
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+        data: {
+          title: name,
+          type: incomeTypeToDb(type),
+          category: incomeCategoryToDb(category),
+          amount: Math.round(amount),
+          date: new Date(date),
+        },
+      });
+
+      if (updated.count === 0) {
+        return NextResponse.json({ error: "Лише автор може редагувати цей запис." }, { status: 403 });
+      }
+
+      const item = await prisma.income.findUnique({
+        where: { id },
+        include: { createdBy: { select: { name: true, email: true } } },
+      });
+
+      if (!item) {
+        return NextResponse.json({ error: "Record not found." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        item: {
+          id: item.id,
+          name: item.title,
+          type: incomeTypeFromDb(item.type),
+          category: incomeCategoryFromDb(item.category),
+          amount: item.amount,
+          date: formatDateIso(item.date),
+          createdById: item.createdById,
+          createdByName: item.createdBy.name || item.createdBy.email || undefined,
+        },
+      });
+    }
+
     const category = String(body.category ?? "").trim();
     const limit = Number(body.limit ?? 0);
 
     if (!category || !Number.isFinite(limit) || limit < 0) {
       return NextResponse.json({ error: "Invalid limit payload." }, { status: 400 });
     }
-
-    const scope = await resolveScopeHouseholdId(resolved.userId, scopeKey);
-    if ("error" in scope) return scope.error;
 
     await prisma.categoryLimit.upsert({
       where: {
@@ -387,3 +501,5 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+

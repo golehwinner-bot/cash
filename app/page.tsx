@@ -53,6 +53,7 @@ type Expense = {
   source: ExpenseSourceId;
   amount: number;
   date: string;
+  createdById?: string;
   createdByName?: string;
 };
 
@@ -63,6 +64,7 @@ type Income = {
   category: IncomeCategoryId;
   amount: number;
   date: string;
+  createdById?: string;
   createdByName?: string;
 };
 
@@ -103,10 +105,10 @@ type FinancePayload = {
 type ThemeMode = "dark" | "light";
 
 const TXT = {
-  tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
+  tabHome: "\u0411\u0430\u043b\u0430\u043d\u0441",
   tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
   tabIncome: "\u0414\u043e\u0445\u0456\u0434",
-  tabRoom: "\u041a\u0456\u043c\u043d\u0430\u0442\u0430",
+  tabRoom: "\u041a\u0456\u043c\u043d\u0430\u0442\u0438",
   balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
   totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
   incomeThisMonth: "\u0446\u044c\u043e\u0433\u043e \u043c\u0456\u0441\u044f\u0446\u044f",
@@ -133,6 +135,7 @@ const TXT = {
   clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
   categoryLimits: "\u041b\u0456\u043c\u0456\u0442\u0438 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0439",
   limit: "\u041b\u0456\u043c\u0456\u0442",
+  edit: "\u0417\u043c\u0456\u043d\u0438\u0442\u0438",
   delete: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
   author: "\u0410\u0432\u0442\u043e\u0440",
   unknownUser: "\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u043e\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447",
@@ -289,12 +292,18 @@ export default function Home() {
   const [defaultScopeKey, setDefaultScopeKey] = useState("personal");
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
+  const [editExpenseForm, setEditExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
+  const [editIncomeForm, setEditIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [householdsLoaded, setHouseholdsLoaded] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const settingsBootstrappedRef = useRef(false);
   const { data: session, status } = useSession();
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
+  const currentUserId = session?.user?.id || "";
 
   const scopeOptions = useMemo(
     () => [
@@ -359,6 +368,23 @@ export default function Home() {
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [settingsOpen]);
+
+  useEffect(() => {
+    const isAnyModalOpen = isExpenseModalOpen || Boolean(editingExpenseId) || Boolean(editingIncomeId);
+    if (!isAnyModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsExpenseModalOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isExpenseModalOpen, editingExpenseId, editingIncomeId]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -540,6 +566,7 @@ export default function Home() {
     if (data.item) {
       setExpenses((prev) => [data.item as Expense, ...prev]);
       setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setIsExpenseModalOpen(false);
     }
   };
 
@@ -571,6 +598,91 @@ export default function Home() {
     }
   };
 
+  const openExpenseEditModal = (expense: Expense) => {
+    if (!currentUserId || expense.createdById !== currentUserId) return;
+    setEditingExpenseId(expense.id);
+    setEditExpenseForm({
+      name: expense.name,
+      category: expense.category,
+      source: expense.source,
+      amount: String(expense.amount),
+      date: expense.date,
+    });
+  };
+
+  const openIncomeEditModal = (income: Income) => {
+    if (!currentUserId || income.createdById !== currentUserId) return;
+    setEditingIncomeId(income.id);
+    setEditIncomeForm({
+      name: income.name,
+      type: income.type,
+      category: income.category,
+      amount: String(income.amount),
+      date: income.date,
+    });
+  };
+
+  const handleUpdateExpense = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingExpenseId) return;
+
+    const amountValue = Number(editExpenseForm.amount);
+    if (!editExpenseForm.name.trim() || !editExpenseForm.date || !amountValue || amountValue <= 0) return;
+
+    const response = await fetch("/api/finance", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "expense",
+        id: editingExpenseId,
+        scopeKey: activeScopeKey,
+        name: editExpenseForm.name.trim(),
+        category: editExpenseForm.category,
+        source: editExpenseForm.source,
+        amount: amountValue,
+        date: editExpenseForm.date,
+      }),
+    });
+
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { item?: Expense };
+    if (data.item) {
+      setExpenses((prev) => prev.map((expense) => (expense.id === data.item?.id ? (data.item as Expense) : expense)));
+      setEditingExpenseId(null);
+    }
+  };
+
+  const handleUpdateIncome = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingIncomeId) return;
+
+    const amountValue = Number(editIncomeForm.amount);
+    if (!editIncomeForm.name.trim() || !editIncomeForm.date || !amountValue || amountValue <= 0) return;
+
+    const response = await fetch("/api/finance", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "income",
+        id: editingIncomeId,
+        scopeKey: activeScopeKey,
+        name: editIncomeForm.name.trim(),
+        type: editIncomeForm.type,
+        category: editIncomeForm.category,
+        amount: amountValue,
+        date: editIncomeForm.date,
+      }),
+    });
+
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { item?: Income };
+    if (data.item) {
+      setIncomes((prev) => prev.map((income) => (income.id === data.item?.id ? (data.item as Income) : income)));
+      setEditingIncomeId(null);
+    }
+  };
   const handleDeleteExpense = async (id: string) => {
     const response = await fetch(`/api/finance?kind=expense&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
       method: "DELETE",
@@ -605,9 +717,11 @@ export default function Home() {
 
   const handleFabClick = () => {
     setActiveTab("home");
+    setIsExpenseModalOpen(true);
     requestAnimationFrame(() => {
-      expenseAmountRef.current?.focus();
-      expenseAmountRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      requestAnimationFrame(() => {
+        expenseAmountRef.current?.focus();
+      });
     });
   };
 
@@ -714,17 +828,6 @@ export default function Home() {
             </div>
           </article>
 
-          <article className="card">
-            <h2>{TXT.addExpense}</h2>
-            <form className="expense-form" onSubmit={handleAddExpense}>
-              <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={expenseForm.name} onChange={(event) => setExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
-              <label>{TXT.category}<select value={expenseForm.category} onChange={(event) => setExpenseForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
-              <label>{TXT.expenseSource}<select value={expenseForm.source} onChange={(event) => setExpenseForm((prev) => ({ ...prev, source: event.target.value as ExpenseSourceId }))}>{expenseSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
-              <label>{TXT.amount}<input ref={expenseAmountRef} type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
-              <label>{TXT.date}<input type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
-              <button className="button button-primary" type="submit">{TXT.save}</button>
-            </form>
-          </article>
         </section>
       ) : null}
 
@@ -736,7 +839,7 @@ export default function Home() {
               <div className="expense-table expense-table-scroll">
                 {filteredExpenses.map((expense) => (
                   <div className="expense-row" key={expense.id}>
-                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button></div>
+                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><div className="entry-actions">{expense.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openExpenseEditModal(expense)}>{TXT.edit}</button> : null}<button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button></div></div>
                   </div>
                 ))}
               </div>
@@ -798,7 +901,7 @@ export default function Home() {
               <div className="income-table expense-table-scroll">
                 {incomes.map((income) => (
                   <div className="income-row" key={income.id}>
-                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button></div>
+                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><div className="entry-actions">{income.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openIncomeEditModal(income)}>{TXT.edit}</button> : null}<button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button></div></div>
                   </div>
                 ))}
               </div>
@@ -813,12 +916,80 @@ export default function Home() {
         </section>
       ) : null}
 
+      {isExpenseModalOpen ? (
+        <div className="modal-backdrop" onClick={() => setIsExpenseModalOpen(false)}>
+          <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.addExpense} onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{TXT.addExpense}</h2>
+              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setIsExpenseModalOpen(false)}>×</button>
+            </div>
+            <form className="expense-form" onSubmit={handleAddExpense}>
+              <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={expenseForm.name} onChange={(event) => setExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
+              <label>{TXT.category}<select value={expenseForm.category} onChange={(event) => setExpenseForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+              <label>{TXT.expenseSource}<select value={expenseForm.source} onChange={(event) => setExpenseForm((prev) => ({ ...prev, source: event.target.value as ExpenseSourceId }))}>{expenseSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
+              <label>{TXT.amount}<input ref={expenseAmountRef} type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.date}<input type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
+      {editingExpenseId ? (
+        <div className="modal-backdrop" onClick={() => setEditingExpenseId(null)}>
+          <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{TXT.edit}</h2>
+              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingExpenseId(null)}>×</button>
+            </div>
+            <form className="expense-form" onSubmit={handleUpdateExpense}>
+              <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={editExpenseForm.name} onChange={(event) => setEditExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
+              <label>{TXT.category}<select value={editExpenseForm.category} onChange={(event) => setEditExpenseForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+              <label>{TXT.expenseSource}<select value={editExpenseForm.source} onChange={(event) => setEditExpenseForm((prev) => ({ ...prev, source: event.target.value as ExpenseSourceId }))}>{expenseSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
+              <label>{TXT.amount}<input type="number" min="1" step="1" placeholder="0" value={editExpenseForm.amount} onChange={(event) => setEditExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.date}<input type="date" value={editExpenseForm.date} onChange={(event) => setEditExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
+      {editingIncomeId ? (
+        <div className="modal-backdrop" onClick={() => setEditingIncomeId(null)}>
+          <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{TXT.edit}</h2>
+              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingIncomeId(null)}>×</button>
+            </div>
+            <form className="income-form" onSubmit={handleUpdateIncome}>
+              <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={editIncomeForm.name} onChange={(event) => setEditIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
+              <label>{TXT.incomeType}<select value={editIncomeForm.type} onChange={(event) => setEditIncomeForm((prev) => ({ ...prev, type: event.target.value as IncomeTypeId }))}>{incomeTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label>
+              <label>{TXT.incomeCategory}<select value={editIncomeForm.category} onChange={(event) => setEditIncomeForm((prev) => ({ ...prev, category: event.target.value as IncomeCategoryId }))}>{incomeCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+              <label>{TXT.amount}<input type="number" min="1" step="1" placeholder="0" value={editIncomeForm.amount} onChange={(event) => setEditIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.date}<input type="date" value={editIncomeForm.date} onChange={(event) => setEditIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
       <button className="fab-action" type="button" aria-label={TXT.addExpense} title={TXT.addExpense} onClick={handleFabClick}>
-        +
+        <span className="fab-plus" aria-hidden="true">+</span>
+        <span>{TXT.addExpense}</span>
       </button>
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
