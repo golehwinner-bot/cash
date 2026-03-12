@@ -456,29 +456,30 @@ export default function Home() {
 
   return (
     <main className="app-shell">
-            <div className="top-controls">
-        <section className="scope-card card">
-          <div className="scope-inline">
-            <p className="section-label">{TXT.scopeTitle}</p>
-            <select value={activeScopeKey} onChange={(event) => setActiveScopeKey(event.target.value)}>
-              {scopeOptions.map((scope) => <option key={scope.key} value={scope.key}>{scope.label}</option>)}
-            </select>
-          </div>
-        </section>
+      <section className="header-shell">
+        <div className="top-controls">
+          <section className="scope-card card">
+            <div className="scope-inline">
+              <p className="section-label">{TXT.scopeTitle}</p>
+              <select value={activeScopeKey} onChange={(event) => setActiveScopeKey(event.target.value)}>
+                {scopeOptions.map((scope) => <option key={scope.key} value={scope.key}>{scope.label}</option>)}
+              </select>
+            </div>
+          </section>
 
-        <header className="top-bar">
-          <span>{currentUserName}</span>
-          <button className="row-action top-signout" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>{"\u0412\u0438\u0439\u0442\u0438"}</button>
-        </header>
-      </div>
+          <header className="top-bar">
+            <span>{currentUserName}</span>
+            <button className="row-action top-signout" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>{"\u0412\u0438\u0439\u0442\u0438"}</button>
+          </header>
+        </div>
 
-      <nav className="tab-nav" aria-label="Primary"> 
-        <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
-        <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
-        <button className={`tab-btn ${activeTab === "income" ? "active" : ""}`} onClick={() => setActiveTab("income")} type="button">{TXT.tabIncome}</button>
-        <button className={`tab-btn ${activeTab === "room" ? "active" : ""}`} onClick={() => setActiveTab("room")} type="button">{TXT.tabRoom}</button>
-      </nav>
-
+        <nav className="tab-nav" aria-label="Primary">
+          <button className={`tab-btn ${activeTab === "home" ? "active" : ""}`} onClick={() => setActiveTab("home")} type="button">{TXT.tabHome}</button>
+          <button className={`tab-btn ${activeTab === "expenses" ? "active" : ""}`} onClick={() => setActiveTab("expenses")} type="button">{TXT.tabExpenses}</button>
+          <button className={`tab-btn ${activeTab === "income" ? "active" : ""}`} onClick={() => setActiveTab("income")} type="button">{TXT.tabIncome}</button>
+          <button className={`tab-btn ${activeTab === "room" ? "active" : ""}`} onClick={() => setActiveTab("room")} type="button">{TXT.tabRoom}</button>
+        </nav>
+      </section>
       {activeTab === "home" ? (
         <section className="tab-page">
           <article className="card">
@@ -603,6 +604,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
