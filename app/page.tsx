@@ -14,10 +14,13 @@ import {
   HeartPulse,
   House,
   Lightbulb,
+  Moon,
   Popcorn,
   Repeat,
   Shirt,
   ShoppingCart,
+  Sun,
+  UserCircle2,
   Wallet,
   type LucideIcon,
 } from "lucide-react";
@@ -97,6 +100,8 @@ type FinancePayload = {
   limits: Array<{ category: string; limit: number }>;
 };
 
+type ThemeMode = "dark" | "light";
+
 const TXT = {
   tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
   tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
@@ -145,6 +150,13 @@ const TXT = {
   roomBalances: "\u0411\u0430\u043b\u0430\u043d\u0441\u0438 \u043a\u0456\u043c\u043d\u0430\u0442",
   noRoomsYet: "\u0412\u0438 \u0449\u0435 \u043d\u0435 \u0454 \u0443\u0447\u0430\u0441\u043d\u0438\u043a\u043e\u043c \u0436\u043e\u0434\u043d\u043e\u0457 \u043a\u0456\u043c\u043d\u0430\u0442\u0438.",
   activeScope: "\u0410\u043a\u0442\u0438\u0432\u043d\u0438\u0439 \u043a\u043e\u043d\u0442\u0435\u043a\u0441\u0442",
+  settings: "\u041d\u0430\u043b\u0430\u0448\u0442\u0443\u0432\u0430\u043d\u043d\u044f",
+  theme: "\u0422\u0435\u043c\u0430",
+  darkTheme: "\u0422\u0435\u043c\u043d\u0430",
+  lightTheme: "\u0421\u0432\u0456\u0442\u043b\u0430",
+  defaultScope: "\u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u0437\u0430 \u043c\u043e\u0432\u0447\u0430\u043d\u043d\u044f\u043c",
+  account: "\u0410\u043a\u0430\u0443\u043d\u0442",
+  signOut: "\u0412\u0438\u0439\u0442\u0438",
 };
 
 const categories: Array<{ id: CategoryId; label: string }> = [
@@ -273,7 +285,13 @@ export default function Home() {
   const [categoryLimits, setCategoryLimits] = useState<Record<CategoryId, number>>(defaultCategoryLimits);
   const [households, setHouseholds] = useState<Household[]>([]);
   const [activeScopeKey, setActiveScopeKey] = useState("personal");
+  const [defaultScopeKey, setDefaultScopeKey] = useState("personal");
+  const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [householdsLoaded, setHouseholdsLoaded] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
+  const settingsRef = useRef<HTMLDivElement | null>(null);
+  const settingsBootstrappedRef = useRef(false);
   const { data: session, status } = useSession();
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
 
@@ -294,20 +312,114 @@ export default function Home() {
     const today = new Date().toISOString().slice(0, 10);
     setExpenseForm((prev) => ({ ...prev, date: prev.date || today }));
     setIncomeForm((prev) => ({ ...prev, date: prev.date || today }));
-    setMounted(true);
+
+    const storedTheme = window.localStorage.getItem("cash:theme");
+    if (storedTheme === "dark" || storedTheme === "light") {
+      setThemeMode(storedTheme);
+    }
+
+        setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!session?.user) return;
-    const loadHouseholds = async () => {
-      const response = await fetch("/api/households", { cache: "no-store" });
-      if (!response.ok) return;
-      const data = (await response.json()) as { households: Household[] };
-      const list = Array.isArray(data.households) ? data.households : [];
-      setHouseholds(list);
+    if (!mounted) return;
+    document.body.setAttribute("data-theme", themeMode);
+    window.localStorage.setItem("cash:theme", themeMode);
+  }, [mounted, themeMode]);
+
+  useEffect(() => {
+    if (!mounted || !householdsLoaded) return;
+
+    const hasActiveScope = scopeOptions.some((scope) => scope.key === activeScopeKey);
+    if (!hasActiveScope) setActiveScopeKey("personal");
+
+    const hasDefaultScope = scopeOptions.some((scope) => scope.key === defaultScopeKey);
+    if (!hasDefaultScope) {
+      setDefaultScopeKey("personal");
+      if (session?.user) {
+        void fetch("/api/user-settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ defaultScopeKey: "personal" }),
+        });
+      }
+    }
+  }, [mounted, householdsLoaded, scopeOptions, activeScopeKey, defaultScopeKey, session?.user]);
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!settingsRef.current?.contains(event.target as Node)) {
+        setSettingsOpen(false);
+      }
     };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+
+    settingsBootstrappedRef.current = false;
+    setHouseholdsLoaded(false);
+
+    const loadHouseholds = async () => {
+      try {
+        const response = await fetch("/api/households", { cache: "no-store" });
+        if (!response.ok) {
+          setHouseholds([]);
+          return;
+        }
+
+        const data = (await response.json()) as { households: Household[] };
+        const list = Array.isArray(data.households) ? data.households : [];
+        setHouseholds(list);
+      } finally {
+        setHouseholdsLoaded(true);
+      }
+    };
+
     void loadHouseholds();
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!mounted || !session?.user || !householdsLoaded || settingsBootstrappedRef.current) return;
+
+    settingsBootstrappedRef.current = true;
+
+    const loadUserSettings = async () => {
+      try {
+        const response = await fetch("/api/user-settings", { cache: "no-store" });
+        if (!response.ok) {
+          setDefaultScopeKey("personal");
+          setActiveScopeKey("personal");
+          return;
+        }
+
+        const data = (await response.json()) as { defaultScopeKey?: string };
+        const requested = typeof data.defaultScopeKey === "string" && data.defaultScopeKey ? data.defaultScopeKey : "personal";
+        const nextScope = scopeOptions.some((scope) => scope.key === requested) ? requested : "personal";
+
+        setDefaultScopeKey(nextScope);
+        setActiveScopeKey(nextScope);
+
+        if (nextScope !== requested) {
+          await fetch("/api/user-settings", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ defaultScopeKey: nextScope }),
+          });
+        }
+      } catch {
+        setDefaultScopeKey("personal");
+        setActiveScopeKey("personal");
+      }
+    };
+
+    void loadUserSettings();
+  }, [mounted, householdsLoaded, session?.user, scopeOptions]);
 
   useEffect(() => {
     if (!mounted || !session?.user) return;
@@ -511,8 +623,67 @@ export default function Home() {
           </section>
 
           <header className="top-bar">
-            <span>{currentUserName}</span>
-            <button className="row-action top-signout" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>{"\u0412\u0438\u0439\u0442\u0438"}</button>
+            <div className="settings-wrap" ref={settingsRef}>
+              <button
+                className="profile-toggle"
+                type="button"
+                aria-label={TXT.settings}
+                onClick={() => setSettingsOpen((prev) => !prev)}
+              >
+                <UserCircle2 size={22} />
+              </button>
+              {settingsOpen ? (
+                <div className="settings-popover">
+                  <p className="settings-title">{TXT.settings}</p>
+
+                  <div className="settings-group">
+                    <p className="settings-label">{TXT.account}</p>
+                    <p className="settings-value">{currentUserName}</p>
+                  </div>
+
+                  <div className="settings-group">
+                    <p className="settings-label">{TXT.theme}</p>
+                    <div className="theme-switch">
+                      <button
+                        type="button"
+                        className={`theme-btn ${themeMode === "dark" ? "active" : ""}`}
+                        onClick={() => setThemeMode("dark")}
+                      >
+                        <Moon size={14} /> {TXT.darkTheme}
+                      </button>
+                      <button
+                        type="button"
+                        className={`theme-btn ${themeMode === "light" ? "active" : ""}`}
+                        onClick={() => setThemeMode("light")}
+                      >
+                        <Sun size={14} /> {TXT.lightTheme}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="settings-group">
+                    <label className="settings-label" htmlFor="default-scope-select">{TXT.defaultScope}</label>
+                    <select
+                      id="default-scope-select"
+                      value={defaultScopeKey}
+                      onChange={(event) => {
+                        const nextScopeKey = event.target.value;
+                        setDefaultScopeKey(nextScopeKey);
+                        void fetch("/api/user-settings", {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ defaultScopeKey: nextScopeKey }),
+                        });
+                      }}
+                    >
+                      {scopeOptions.map((scope) => <option key={scope.key} value={scope.key}>{scope.label}</option>)}
+                    </select>
+                  </div>
+
+                  <button className="row-action row-action-danger settings-signout" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>{TXT.signOut}</button>
+                </div>
+              ) : null}
+            </div>
           </header>
         </div>
 
@@ -639,4 +810,19 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 

@@ -1,4 +1,7 @@
 ﻿:root {
+  --bg-grad-1: rgba(34, 197, 94, 0.14);
+  --bg-grad-2: rgba(56, 189, 248, 0.1);
+  --bg-solid: #0b1220;
   --bg: #0b1220;
   --surface: #0f172a;
   --card: #111827;
@@ -24,3 +27,24 @@
   --cat-health: #ef4444;
   --cat-shopping: #ec4899;
 }
+
+body[data-theme="light"] {
+  --bg-grad-1: rgba(34, 197, 94, 0.1);
+  --bg-grad-2: rgba(56, 189, 248, 0.08);
+  --bg-solid: #f4f7fb;
+  --bg: #f4f7fb;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --hover: #eef2f7;
+  --text: #0f172a;
+  --muted: #475569;
+  --muted-soft: #64748b;
+  --line: #d9e2ef;
+  --line-soft-green: rgba(22, 163, 74, 0.2);
+  --primary: #16a34a;
+  --primary-hover: #15803d;
+  --primary-soft: #22c55e;
+  --shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+  --shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
