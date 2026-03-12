@@ -38,7 +38,7 @@ export async function GET() {
     if ("error" in resolved) return resolved.error;
 
     const memberships = await prisma.householdMember.findMany({
-      where: { userId: resolved.userId },
+      where: { userId: resolved.userId, household: { personalOwnerId: null } },
       include: { household: true },
       orderBy: { createdAt: "asc" },
     });
@@ -94,3 +94,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+

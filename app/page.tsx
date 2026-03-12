@@ -91,9 +91,11 @@ type Household = {
   role: "OWNER" | "ADMIN" | "MEMBER";
 };
 
-const STORAGE_EXPENSES = "cashflow-expenses-v1";
-const STORAGE_INCOMES = "cashflow-incomes-v1";
-const STORAGE_LIMITS = "cashflow-limits-v1";
+type FinancePayload = {
+  expenses: Expense[];
+  incomes: Income[];
+  limits: Array<{ category: string; limit: number }>;
+};
 
 const TXT = {
   tabHome: "\u041e\u0441\u043d\u043e\u0432\u043d\u0430",
@@ -258,12 +260,7 @@ const currency = new Intl.NumberFormat("uk-UA", {
 const formatDate = (value: string) =>
   new Intl.DateTimeFormat("uk-UA", { day: "numeric", month: "short" }).format(new Date(value));
 
-const toId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 const formatPlain = (value: number) => value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-
-const storageKeyExpenses = (scopeKey: string) => `${STORAGE_EXPENSES}:${scopeKey}`;
-const storageKeyIncomes = (scopeKey: string) => `${STORAGE_INCOMES}:${scopeKey}`;
-const storageKeyLimits = (scopeKey: string) => `${STORAGE_LIMITS}:${scopeKey}`;
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<AppTab>("home");
@@ -313,37 +310,31 @@ export default function Home() {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!mounted) return;
-    const keyExp = storageKeyExpenses(activeScopeKey);
-    const keyInc = storageKeyIncomes(activeScopeKey);
-    const keyLim = storageKeyLimits(activeScopeKey);
+    if (!mounted || !session?.user) return;
 
-    try {
-      const rawExp = localStorage.getItem(keyExp);
-      const rawInc = localStorage.getItem(keyInc);
-      const rawLim = localStorage.getItem(keyLim);
+    const loadFinance = async () => {
+      const response = await fetch(`/api/finance?scopeKey=${encodeURIComponent(activeScopeKey)}`, { cache: "no-store" });
+      if (!response.ok) return;
 
-      if (rawExp) setExpenses(JSON.parse(rawExp) as Expense[]);
-      else setExpenses(activeScopeKey === "personal" ? initialExpenses : []);
+      const data = (await response.json()) as FinancePayload;
+      const nextExpenses = Array.isArray(data.expenses) ? data.expenses : [];
+      const nextIncomes = Array.isArray(data.incomes) ? data.incomes : [];
+      const nextLimits = Array.isArray(data.limits) ? data.limits : [];
 
-      if (rawInc) setIncomes(JSON.parse(rawInc) as Income[]);
-      else setIncomes(activeScopeKey === "personal" ? initialIncomes : []);
+      setExpenses(nextExpenses);
+      setIncomes(nextIncomes);
+      setCategoryLimits((prev) => {
+        const merged = { ...defaultCategoryLimits, ...prev };
+        for (const item of nextLimits) {
+          const key = item.category as CategoryId;
+          if (key in merged) merged[key] = Number(item.limit) || 0;
+        }
+        return merged;
+      });
+    };
 
-      if (rawLim) setCategoryLimits({ ...defaultCategoryLimits, ...(JSON.parse(rawLim) as Record<CategoryId, number>) });
-      else setCategoryLimits(defaultCategoryLimits);
-    } catch {
-      setExpenses(activeScopeKey === "personal" ? initialExpenses : []);
-      setIncomes(activeScopeKey === "personal" ? initialIncomes : []);
-      setCategoryLimits(defaultCategoryLimits);
-    }
-  }, [mounted, activeScopeKey]);
-
-  useEffect(() => {
-    if (!mounted) return;
-    localStorage.setItem(storageKeyExpenses(activeScopeKey), JSON.stringify(expenses));
-    localStorage.setItem(storageKeyIncomes(activeScopeKey), JSON.stringify(incomes));
-    localStorage.setItem(storageKeyLimits(activeScopeKey), JSON.stringify(categoryLimits));
-  }, [expenses, incomes, categoryLimits, mounted, activeScopeKey]);
+    void loadFinance();
+  }, [mounted, activeScopeKey, session?.user?.id]);
 
   const formatCurrency = (value: number) => mounted ? currency.format(value) : `${formatPlain(value)} ${TXT.uah}`;
 
@@ -397,50 +388,92 @@ export default function Home() {
     });
   }, [filteredExpenses, categoryLimits]);
 
-  const handleAddExpense = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddExpense = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amountValue = Number(expenseForm.amount);
     if (!expenseForm.name.trim() || !expenseForm.date || !amountValue || amountValue <= 0) return;
 
-    const next: Expense = {
-      id: toId(),
-      name: expenseForm.name.trim(),
-      category: expenseForm.category,
-      source: expenseForm.source,
-      amount: amountValue,
-      date: expenseForm.date,
-      createdByName: currentUserName,
-    };
+    const response = await fetch("/api/finance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "expense",
+        scopeKey: activeScopeKey,
+        name: expenseForm.name.trim(),
+        category: expenseForm.category,
+        source: expenseForm.source,
+        amount: amountValue,
+        date: expenseForm.date,
+      }),
+    });
 
-    setExpenses((prev) => [next, ...prev]);
-    setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { item?: Expense };
+    if (data.item) {
+      setExpenses((prev) => [data.item as Expense, ...prev]);
+      setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
+    }
   };
 
-  const handleAddIncome = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleAddIncome = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amountValue = Number(incomeForm.amount);
     if (!incomeForm.name.trim() || !incomeForm.date || !amountValue || amountValue <= 0) return;
 
-    const next: Income = {
-      id: toId(),
-      name: incomeForm.name.trim(),
-      type: incomeForm.type,
-      category: incomeForm.category,
-      amount: amountValue,
-      date: incomeForm.date,
-      createdByName: currentUserName,
-    };
+    const response = await fetch("/api/finance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "income",
+        scopeKey: activeScopeKey,
+        name: incomeForm.name.trim(),
+        type: incomeForm.type,
+        category: incomeForm.category,
+        amount: amountValue,
+        date: incomeForm.date,
+      }),
+    });
 
-    setIncomes((prev) => [next, ...prev]);
-    setIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { item?: Income };
+    if (data.item) {
+      setIncomes((prev) => [data.item as Income, ...prev]);
+      setIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+    }
   };
 
-  const handleDeleteExpense = (id: string) => setExpenses((prev) => prev.filter((expense) => expense.id !== id));
-  const handleDeleteIncome = (id: string) => setIncomes((prev) => prev.filter((income) => income.id !== id));
+  const handleDeleteExpense = async (id: string) => {
+    const response = await fetch(`/api/finance?kind=expense&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) return;
+    setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+  };
+
+  const handleDeleteIncome = async (id: string) => {
+    const response = await fetch(`/api/finance?kind=income&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) return;
+    setIncomes((prev) => prev.filter((income) => income.id !== id));
+  };
+
   const handleCategoryLimitChange = (category: CategoryId, rawValue: string) => {
     const digitsOnly = rawValue.replace(/[^\d]/g, "");
     const nextValue = digitsOnly === "" ? 0 : Number(digitsOnly);
     setCategoryLimits((prev) => ({ ...prev, [category]: nextValue }));
+
+    void fetch("/api/finance", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        scopeKey: activeScopeKey,
+        category,
+        limit: nextValue,
+      }),
+    });
   };
 
   const handleFabClick = () => {
@@ -602,6 +635,15 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
+
+
 
 
 

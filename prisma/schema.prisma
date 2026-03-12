@@ -21,7 +21,15 @@ enum IncomeType {
 enum IncomeCategory {
   SALARY
   PART_TIME
+  RENT
+  SALE
+  FOP
   OTHER
+}
+
+enum ExpenseSource {
+  CASH
+  CARD
 }
 
 enum NotificationType {
@@ -48,6 +56,7 @@ model User {
 model Household {
   id                String            @id @default(cuid())
   name              String
+  personalOwnerId   String?           @unique
   joinCode          String?           @unique
   joinRole          HouseholdRole?
   joinCodeExpiresAt DateTime?
@@ -56,6 +65,7 @@ model Household {
   members           HouseholdMember[]
   expenses          Expense[]
   incomes           Income[]
+  limits            CategoryLimit[]
 }
 
 model HouseholdMember {
@@ -87,17 +97,18 @@ model Notification {
 }
 
 model Expense {
-  id          String    @id @default(cuid())
+  id          String        @id @default(cuid())
   title       String
   amount      Int
   category    String
+  source      ExpenseSource @default(CARD)
   date        DateTime
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
   householdId String
   createdById String
-  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
-  createdBy   User      @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  household   Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy   User          @relation("ExpenseCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([householdId, date])
 }
@@ -117,6 +128,19 @@ model Income {
   createdBy   User           @relation("IncomeCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
 
   @@index([householdId, date])
+}
+
+model CategoryLimit {
+  id          String    @id @default(cuid())
+  category    String
+  limitAmount Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  householdId String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, category])
+  @@index([householdId])
 }
 
 model Account {
