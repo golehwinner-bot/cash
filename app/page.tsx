@@ -492,8 +492,7 @@ export default function Home() {
           </article>
 
           <article className="card">
-            <p className="section-label">{TXT.addExpense}</p>
-            <h2>{TXT.quickEntry}</h2>
+            <h2>{TXT.addExpense}</h2>
             <form className="expense-form" onSubmit={handleAddExpense}>
               <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={expenseForm.name} onChange={(event) => setExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
               <label>{TXT.category}<select value={expenseForm.category} onChange={(event) => setExpenseForm((prev) => ({ ...prev, category: event.target.value as CategoryId }))}>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
@@ -510,16 +509,6 @@ export default function Home() {
         <section className="tab-page">
           <article className="card">
             <p className="section-label">{TXT.expensesTitle}</p>
-            <div className="filters-card">
-              <p className="section-label">{TXT.filters}</p>
-              <div className="filters-grid">
-                <label>{TXT.category}<select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value as FilterCategoryId }))}><option value="all">{TXT.allCategories}</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
-                <label>{TXT.dateFrom}<input type="date" value={filters.dateFrom} onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))} /></label>
-                <label>{TXT.dateTo}<input type="date" value={filters.dateTo} onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))} /></label>
-              </div>
-              <div className="filters-footer"><p className="summary-pill">{TXT.periodSummary}: <strong>{formatCurrency(totalSpentFiltered)}</strong> ({filteredExpenses.length} {TXT.records})</p><button className="text-button" type="button" onClick={() => setFilters(defaultFilters())}>{TXT.clearFilters}</button></div>
-            </div>
-
             {filteredExpenses.length === 0 ? <p className="empty-line">{expenses.length === 0 ? TXT.noExpenses : TXT.noFilteredExpenses}</p> : (
               <div className="expense-table">
                 {filteredExpenses.map((expense) => (
@@ -554,6 +543,16 @@ export default function Home() {
                 </div>
               ))}
             </div>
+
+            <div className="filters-card">
+              <p className="section-label">{TXT.filters}</p>
+              <div className="filters-grid">
+                <label>{TXT.category}<select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value as FilterCategoryId }))}><option value="all">{TXT.allCategories}</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+                <label>{TXT.dateFrom}<input type="date" value={filters.dateFrom} onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))} /></label>
+                <label>{TXT.dateTo}<input type="date" value={filters.dateTo} onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))} /></label>
+              </div>
+              <div className="filters-footer"><p className="summary-pill">{TXT.periodSummary}: <strong>{formatCurrency(totalSpentFiltered)}</strong> ({filteredExpenses.length} {TXT.records})</p><button className="text-button" type="button" onClick={() => setFilters(defaultFilters())}>{TXT.clearFilters}</button></div>
+            </div>
           </article>
         </section>
       ) : null}
@@ -561,8 +560,7 @@ export default function Home() {
       {activeTab === "income" ? (
         <section className="tab-page">
           <article className="card">
-            <p className="section-label">{TXT.addIncome}</p>
-            <h2>{TXT.incomeTitle}</h2>
+            <h2>{TXT.addIncome}</h2>
             <form className="income-form" onSubmit={handleAddIncome}>
               <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={incomeForm.name} onChange={(event) => setIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
               <label>{TXT.incomeType}<select value={incomeForm.type} onChange={(event) => setIncomeForm((prev) => ({ ...prev, type: event.target.value as IncomeTypeId }))}>{incomeTypes.map((type) => <option key={type.id} value={type.id}>{type.label}</option>)}</select></label>
@@ -604,6 +602,9 @@ export default function Home() {
     </main>
   );
 }
+
+
+
 
 
 
