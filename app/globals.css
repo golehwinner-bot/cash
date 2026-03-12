@@ -294,7 +294,7 @@ button:focus-visible {
 }
 
 .balance-hero-amount {
-  font-size: 92px;
+  font-size: clamp(42px, 11vw, 56px);
   font-weight: 700;
   line-height: 0.95;
   letter-spacing: -0.03em;
@@ -700,10 +700,8 @@ select option {
 
 
 
+`r`n
 
-.balance-hero .balance-hero-amount {
-  font-size: clamp(84px, 9vw, 112px) !important;
-}
 
 
 

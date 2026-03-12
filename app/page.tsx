@@ -484,7 +484,7 @@ export default function Home() {
           <article className="card">
             <p className="section-label">{TXT.balance}</p>
             <div className="balance-grid">
-              <div className="balance-item balance-hero"><span className="balance-hero-label">{TXT.totalBalance}</span><strong className="balance-hero-amount" style={{ fontSize: "clamp(44px, 14vw, 60px)", lineHeight: 0.9, fontWeight: 700 }}>{formatCurrency(totalBalance)}</strong><p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p></div>
+              <div className="balance-item balance-hero"><span className="balance-hero-label">{TXT.totalBalance}</span><strong className="balance-hero-amount">{formatCurrency(totalBalance)}</strong><p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p></div>
               <div className="balance-item"><span className="balance-item-label"><Wallet size={16} /> {TXT.cashBalance}</span><strong>{formatCurrency(cashBalance)}</strong></div>
               <div className="balance-item"><span className="balance-item-label"><CreditCard size={16} /> {TXT.cardBalance}</span><strong>{formatCurrency(cardBalance)}</strong></div>
             </div>
@@ -603,6 +603,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
