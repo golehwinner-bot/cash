@@ -148,13 +148,18 @@ export async function GET(request: Request) {
     const scope = await resolveScopeHouseholdId(resolved.userId, scopeKey);
     if ("error" in scope) return scope.error;
 
-    const [expenses, incomes, limits] = await prisma.$transaction([
+    const [expenses, incomes, currencyIncomes, limits] = await prisma.$transaction([
       prisma.expense.findMany({
         where: { householdId: scope.householdId },
         include: { createdBy: { select: { name: true, email: true } } },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
       }),
       prisma.income.findMany({
+        where: { householdId: scope.householdId },
+        include: { createdBy: { select: { name: true, email: true } } },
+        orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+      }),
+      prisma.currencyIncome.findMany({
         where: { householdId: scope.householdId },
         include: { createdBy: { select: { name: true, email: true } } },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -178,6 +183,14 @@ export async function GET(request: Request) {
         name: item.title,
         type: incomeTypeFromDb(item.type),
         category: incomeCategoryFromDb(item.category),
+        amount: item.amount,
+        date: formatDateIso(item.date),
+        createdById: item.createdById,
+        createdByName: item.createdBy.name || item.createdBy.email || undefined,
+      })),
+      currencyIncomes: currencyIncomes.map((item) => ({
+        id: item.id,
+        currency: item.currency,
         amount: item.amount,
         date: formatDateIso(item.date),
         createdById: item.createdById,
@@ -295,6 +308,41 @@ export async function POST(request: Request) {
       );
     }
 
+
+    if (kind === "currency_income") {
+      const currency = String(body.currency ?? "").trim().toUpperCase();
+      const amount = Number(body.amount ?? 0);
+      const date = String(body.date ?? "");
+
+      if (!currency || !date || !Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({ error: "Invalid currency income payload." }, { status: 400 });
+      }
+
+      const created = await prisma.currencyIncome.create({
+        data: {
+          currency,
+          amount,
+          date: new Date(date),
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+        include: { createdBy: { select: { name: true, email: true } } },
+      });
+
+      return NextResponse.json(
+        {
+          item: {
+            id: created.id,
+            currency: created.currency,
+            amount: created.amount,
+            date: formatDateIso(created.date),
+            createdById: created.createdById,
+            createdByName: created.createdBy.name || created.createdBy.email || undefined,
+          },
+        },
+        { status: 201 },
+      );
+    }
     return NextResponse.json({ error: "Unsupported operation." }, { status: 400 });
   } catch (error) {
     return NextResponse.json(
@@ -501,5 +549,7 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
+
 
 

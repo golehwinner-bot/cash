@@ -45,6 +45,7 @@ type AppTab = "home" | "expenses" | "income" | "room";
 type IncomeTypeId = "cash" | "card";
 type IncomeCategoryId = "salary" | "part_time" | "rent" | "sale" | "fop" | "other";
 type ExpenseSourceId = "cash" | "card";
+type CurrencyCode = "USD" | "EUR" | "GBP" | "CHF" | "PLN";
 
 type Expense = {
   id: string;
@@ -68,6 +69,14 @@ type Income = {
   createdByName?: string;
 };
 
+type CurrencyIncome = {
+  id: string;
+  currency: CurrencyCode;
+  amount: number;
+  date: string;
+  createdById?: string;
+  createdByName?: string;
+};
 type ExpenseForm = {
   name: string;
   category: CategoryId;
@@ -84,6 +93,11 @@ type IncomeForm = {
   date: string;
 };
 
+type CurrencyIncomeForm = {
+  currency: CurrencyCode;
+  amount: string;
+  date: string;
+};
 type ExpenseFilters = {
   category: FilterCategoryId;
   dateFrom: string;
@@ -99,6 +113,7 @@ type Household = {
 type FinancePayload = {
   expenses: Expense[];
   incomes: Income[];
+  currencyIncomes: CurrencyIncome[];
   limits: Array<{ category: string; limit: number }>;
 };
 
@@ -144,6 +159,10 @@ const TXT = {
   incomeType: "\u0422\u0438\u043f \u0434\u043e\u0445\u043e\u0434\u0443",
   incomeCategory: "\u041a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u044f \u0434\u043e\u0445\u043e\u0434\u0443",
   totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",
+  currencyBalance: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
+  addCurrency: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0430\u043b\u044e\u0442\u0443",
+  currency: "\u0412\u0430\u043b\u044e\u0442\u0430",
+  noCurrencyYet: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0445 \u043d\u0430\u0434\u0445\u043e\u0434\u0436\u0435\u043d\u044c \u043f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454.",
   noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
   noIncomes: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0434\u043e\u0445\u043e\u0434\u0456\u0432.",
   noFilteredExpenses: "\u0417\u0430 \u043e\u0431\u0440\u0430\u043d\u0438\u043c\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0430\u043c\u0438 \u0432\u0438\u0442\u0440\u0430\u0442 \u043d\u0435 \u0437\u043d\u0430\u0439\u0434\u0435\u043d\u043e.",
@@ -196,6 +215,14 @@ const incomeCategories: Array<{ id: IncomeCategoryId; label: string }> = [
   { id: "sale", label: "\u041f\u0440\u043e\u0434\u0430\u0436" },
   { id: "fop", label: "\u0424\u041e\u041f" },
   { id: "other", label: "\u0406\u043d\u0448\u0456 \u0434\u043e\u0445\u043e\u0434\u0438" },
+];
+
+const currencyOptions: Array<{ id: CurrencyCode; label: string }> = [
+  { id: "USD", label: "\u0414\u043e\u043b\u0430\u0440 (USD)" },
+  { id: "EUR", label: "\u0404\u0432\u0440\u043e (EUR)" },
+  { id: "GBP", label: "\u0411\u0440\u0438\u0442\u0430\u043d\u0441\u044c\u043a\u0438\u0439 \u0444\u0443\u043d\u0442 (GBP)" },
+  { id: "CHF", label: "\u0428\u0432\u0435\u0439\u0446\u0430\u0440\u0441\u044c\u043a\u0438\u0439 \u0444\u0440\u0430\u043d\u043a (CHF)" },
+  { id: "PLN", label: "\u041f\u043e\u043b\u044c\u0441\u044c\u043a\u0438\u0439 \u0437\u043b\u043e\u0442\u0438\u0439 (PLN)" },
 ];
 
 const categoryLabelMap: Record<CategoryId, string> = {
@@ -262,9 +289,11 @@ const defaultCategoryLimits: Record<CategoryId, number> = {
 const initialExpenses: Expense[] = [];
 
 const initialIncomes: Income[] = [];
+const initialCurrencyIncomes: CurrencyIncome[] = [];
 
 const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, source: expenseSources[0].id, amount: "", date: "" });
 const defaultIncomeForm = (): IncomeForm => ({ name: "", type: incomeTypes[0].id, category: incomeCategories[0].id, amount: "", date: "" });
+const defaultCurrencyIncomeForm = (): CurrencyIncomeForm => ({ currency: currencyOptions[0].id, amount: "", date: "" });
 const defaultFilters = (): ExpenseFilters => ({ category: "all", dateFrom: "", dateTo: "" });
 
 const currency = new Intl.NumberFormat("uk-UA", {
@@ -282,9 +311,11 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [incomes, setIncomes] = useState<Income[]>(initialIncomes);
+  const [currencyIncomes, setCurrencyIncomes] = useState<CurrencyIncome[]>(initialCurrencyIncomes);
   const [mounted, setMounted] = useState(false);
   const [expenseForm, setExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [incomeForm, setIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
+  const [currencyIncomeForm, setCurrencyIncomeForm] = useState<CurrencyIncomeForm>(defaultCurrencyIncomeForm);
   const [filters, setFilters] = useState<ExpenseFilters>(defaultFilters);
   const [categoryLimits, setCategoryLimits] = useState<Record<CategoryId, number>>(defaultCategoryLimits);
   const [households, setHouseholds] = useState<Household[]>([]);
@@ -298,6 +329,7 @@ export default function Home() {
   const [editExpenseForm, setEditExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [editIncomeForm, setEditIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [householdsLoaded, setHouseholdsLoaded] = useState(false);
+  const [currencyAccordionOpen, setCurrencyAccordionOpen] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const settingsBootstrappedRef = useRef(false);
@@ -322,6 +354,7 @@ export default function Home() {
     const today = new Date().toISOString().slice(0, 10);
     setExpenseForm((prev) => ({ ...prev, date: prev.date || today }));
     setIncomeForm((prev) => ({ ...prev, date: prev.date || today }));
+    setCurrencyIncomeForm((prev) => ({ ...prev, date: prev.date || today }));
 
     const storedTheme = window.localStorage.getItem("cash:theme");
     if (storedTheme === "dark" || storedTheme === "light") {
@@ -458,10 +491,12 @@ export default function Home() {
       const data = (await response.json()) as FinancePayload;
       const nextExpenses = Array.isArray(data.expenses) ? data.expenses : [];
       const nextIncomes = Array.isArray(data.incomes) ? data.incomes : [];
+      const nextCurrencyIncomes = Array.isArray(data.currencyIncomes) ? data.currencyIncomes : [];
       const nextLimits = Array.isArray(data.limits) ? data.limits : [];
 
       setExpenses(nextExpenses);
       setIncomes(nextIncomes);
+      setCurrencyIncomes(nextCurrencyIncomes);
       setCategoryLimits((prev) => {
         const merged = { ...defaultCategoryLimits, ...prev };
         for (const item of nextLimits) {
@@ -476,6 +511,13 @@ export default function Home() {
   }, [mounted, activeScopeKey, session?.user?.id]);
 
   const formatCurrency = (value: number) => mounted ? currency.format(value) : `${formatPlain(value)} ${TXT.uah}`;
+
+  const formatByCode = (value: number, code: CurrencyCode) => {
+    const output = mounted
+      ? new Intl.NumberFormat("uk-UA", { maximumFractionDigits: 2 }).format(value)
+      : value.toFixed(2);
+    return `${output} ${code}`;
+  };
 
   const filteredExpenses = useMemo(
     () => expenses.filter((expense) => {
@@ -515,6 +557,16 @@ export default function Home() {
         : balanceAmountChars <= 13
           ? "balance-hero-amount-md"
           : "balance-hero-amount-sm";
+
+  const currencyTotals = useMemo(() => {
+    const totals: Partial<Record<CurrencyCode, number>> = {};
+    for (const item of currencyIncomes) {
+      totals[item.currency] = (totals[item.currency] || 0) + Number(item.amount || 0);
+    }
+    return currencyOptions
+      .map((option) => ({ currency: option.id, label: option.label, amount: totals[option.id] || 0 }))
+      .filter((item) => item.amount > 0);
+  }, [currencyIncomes]);
 
   const limitsByCategory = useMemo(() => {
     const emptyTotals = categories.reduce((acc, category) => {
@@ -683,6 +735,32 @@ export default function Home() {
       setEditingIncomeId(null);
     }
   };
+
+  const handleAddCurrencyIncome = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const amountValue = Number(currencyIncomeForm.amount);
+    if (!currencyIncomeForm.currency || !currencyIncomeForm.date || !amountValue || amountValue <= 0) return;
+
+    const response = await fetch("/api/finance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "currency_income",
+        scopeKey: activeScopeKey,
+        currency: currencyIncomeForm.currency,
+        amount: amountValue,
+        date: currencyIncomeForm.date,
+      }),
+    });
+
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { item?: CurrencyIncome };
+    if (data.item) {
+      setCurrencyIncomes((prev) => [data.item as CurrencyIncome, ...prev]);
+      setCurrencyIncomeForm((prev) => ({ ...prev, amount: "" }));
+    }
+  };
   const handleDeleteExpense = async (id: string) => {
     const response = await fetch(`/api/finance?kind=expense&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
       method: "DELETE",
@@ -828,6 +906,28 @@ export default function Home() {
             </div>
           </article>
 
+          <article className="card currency-card">
+            <button className="accordion-toggle" type="button" onClick={() => setCurrencyAccordionOpen((prev) => !prev)}>
+              <span>{TXT.currencyBalance}</span>
+              <span>{currencyAccordionOpen ? "−" : "+"}</span>
+            </button>
+            {currencyAccordionOpen ? (
+              <div className="accordion-content">
+                {currencyTotals.length === 0 ? (
+                  <p className="empty-line">{TXT.noCurrencyYet}</p>
+                ) : (
+                  <div className="currency-list">
+                    {currencyTotals.map((item) => (
+                      <div className="currency-row" key={item.currency}>
+                        <strong>{item.label}</strong>
+                        <span>{formatByCode(item.amount, item.currency)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </article>
         </section>
       ) : null}
 
@@ -894,6 +994,15 @@ export default function Home() {
             </form>
           </article>
 
+          <article className="card">
+            <h2>{TXT.addCurrency}</h2>
+            <form className="income-form" onSubmit={handleAddCurrencyIncome}>
+              <label>{TXT.currency}<select value={currencyIncomeForm.currency} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, currency: event.target.value as CurrencyCode }))}>{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+              <label>{TXT.amount}<input type="number" min="0.01" step="0.01" placeholder="0" value={currencyIncomeForm.amount} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.date}<input type="date" value={currencyIncomeForm.date} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
           <article className="card">
             <p className="section-label">{TXT.totalIncome}</p>
             <p className="summary-pill"><strong>{formatCurrency(totalIncomeAll)}</strong></p>
@@ -980,6 +1089,13 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
+
 
 
 

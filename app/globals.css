@@ -1562,3 +1562,62 @@ body[data-theme="light"] .fab-action:hover {
   border-color: rgba(21, 128, 61, 0.82);
   background: linear-gradient(115deg, #15803d 0%, #16a34a 58%, #22c55e 100%);
 }
+
+.currency-card {
+  display: grid;
+  gap: 10px;
+}
+
+.accordion-toggle {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.accordion-toggle:hover {
+  border-color: rgba(74, 222, 128, 0.45);
+}
+
+.accordion-content {
+  padding: 4px 2px 2px;
+}
+
+.currency-list {
+  display: grid;
+  gap: 8px;
+}
+
+.currency-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: rgba(17, 24, 39, 0.72);
+}
+
+.currency-row strong {
+  font-size: 0.95rem;
+}
+
+body[data-theme="light"] .accordion-toggle {
+  background: #ffffff;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+body[data-theme="light"] .currency-row {
+  background: #ffffff;
+  border-color: #d9e2ef;
+}

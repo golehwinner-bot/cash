@@ -43,6 +43,7 @@ model User {
   emailVerified   DateTime?
   image           String?
   passwordHash    String?
+  defaultScopeKey String            @default("personal")
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   accounts        Account[]
@@ -51,6 +52,7 @@ model User {
   notifications   Notification[]
   createdExpenses Expense[]         @relation("ExpenseCreatedBy")
   createdIncomes  Income[]          @relation("IncomeCreatedBy")
+  currencyIncomes CurrencyIncome[]  @relation("CurrencyIncomeCreatedBy")
 }
 
 model Household {
@@ -65,6 +67,7 @@ model Household {
   members           HouseholdMember[]
   expenses          Expense[]
   incomes           Income[]
+  currencyIncomes   CurrencyIncome[]
   limits            CategoryLimit[]
 }
 
@@ -130,6 +133,21 @@ model Income {
   @@index([householdId, date])
 }
 
+
+model CurrencyIncome {
+  id          String    @id @default(cuid())
+  currency    String
+  amount      Float
+  date        DateTime
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  householdId String
+  createdById String
+  household   Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy   User      @relation("CurrencyIncomeCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([householdId, date])
+}
 model CategoryLimit {
   id          String    @id @default(cuid())
   category    String
@@ -182,3 +200,4 @@ model VerificationToken {
 
   @@id([identifier, token])
 }
+
