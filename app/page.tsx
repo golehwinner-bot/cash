@@ -110,6 +110,7 @@ const TXT = {
   balance: "\u0411\u0430\u043b\u0430\u043d\u0441",
   totalBalance: "\u0417\u0430\u0433\u0430\u043b\u044c\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
   incomeThisMonth: "\u0446\u044c\u043e\u0433\u043e \u043c\u0456\u0441\u044f\u0446\u044f",
+  expensesThisMonth: "\u0432\u0438\u0442\u0440\u0430\u0442\u0438 \u0446\u044c\u043e\u0433\u043e \u043c\u0456\u0441\u044f\u0446\u044f",
   cashBalance: "\u0413\u043e\u0442\u0456\u0432\u043a\u0430",
   cardBalance: "\u041a\u0430\u0440\u0442\u043a\u0430",
   addExpense: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0438\u0442\u0440\u0430\u0442\u0443",
@@ -467,6 +468,10 @@ export default function Home() {
     const currentMonthKey = new Date().toISOString().slice(0, 7);
     return incomes.filter((income) => income.date.startsWith(currentMonthKey)).reduce((sum, income) => sum + income.amount, 0);
   }, [incomes]);
+  const totalSpentCurrentMonth = useMemo(() => {
+    const currentMonthKey = new Date().toISOString().slice(0, 7);
+    return expenses.filter((expense) => expense.date.startsWith(currentMonthKey)).reduce((sum, expense) => sum + expense.amount, 0);
+  }, [expenses]);
   const cashIncome = useMemo(() => incomes.filter((income) => income.type === "cash").reduce((sum, income) => sum + income.amount, 0), [incomes]);
   const cardIncome = useMemo(() => incomes.filter((income) => income.type === "card").reduce((sum, income) => sum + income.amount, 0), [incomes]);
   const cashSpent = useMemo(() => expenses.filter((expense) => expense.source === "cash").reduce((sum, expense) => sum + expense.amount, 0), [expenses]);
@@ -699,7 +704,11 @@ export default function Home() {
           <article className="card">
             <p className="section-label">{TXT.balance}</p>
             <div className="balance-grid">
-              <div className="balance-item balance-hero"><strong className={`balance-hero-amount ${balanceAmountSizeClass}`}>{totalBalanceText}</strong><p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p></div>
+              <div className="balance-item balance-hero">
+                <strong className={`balance-hero-amount ${balanceAmountSizeClass}`}>{totalBalanceText}</strong>
+                <p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p>
+                <p className="balance-hero-meta balance-hero-meta-expense"><span className="balance-hero-meta-strong-expense"><span className="balance-hero-arrow-down">↘</span> -{formatCurrency(totalSpentCurrentMonth)}</span> {TXT.expensesThisMonth}</p>
+              </div>
               <div className="balance-item"><span className="balance-item-label"><Wallet size={16} /> {TXT.cashBalance}</span><strong>{formatCurrency(cashBalance)}</strong></div>
               <div className="balance-item"><span className="balance-item-label"><CreditCard size={16} /> {TXT.cardBalance}</span><strong>{formatCurrency(cardBalance)}</strong></div>
             </div>
@@ -810,6 +819,7 @@ export default function Home() {
     </main>
   );
 }
+
 
 
 
