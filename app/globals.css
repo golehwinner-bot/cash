@@ -1321,6 +1321,10 @@ body[data-theme="light"] .settings-value {
   color: #334155;
 }
 
+body[data-theme="light"] .entry-title {
+  color: #0f172a;
+}
+
 body[data-theme="light"] .tab-btn.active {
   color: #14532d;
 }
@@ -1434,3 +1438,4 @@ body[data-theme="light"] .balance-hero-meta-strong-expense,
 body[data-theme="light"] .balance-hero-arrow-down {
   color: #dc2626;
 }
+
