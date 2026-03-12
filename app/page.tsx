@@ -543,7 +543,7 @@ export default function Home() {
           <article className="card">
             <p className="section-label">{TXT.expensesTitle}</p>
             {filteredExpenses.length === 0 ? <p className="empty-line">{expenses.length === 0 ? TXT.noExpenses : TXT.noFilteredExpenses}</p> : (
-              <div className="expense-table">
+              <div className="expense-table expense-table-scroll">
                 {filteredExpenses.map((expense) => (
                   <div className="expense-row" key={expense.id}>
                     <div><strong>{expense.name}</strong><p>{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p></div>
@@ -635,34 +635,4 @@ export default function Home() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

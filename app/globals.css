@@ -437,6 +437,20 @@ button:focus-visible {
   gap: 10px;
 }
 
+.expense-table-scroll {
+  max-height: 196px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.expense-table-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.expense-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 999px;
+}
 .expense-row,
 .income-row,
 .budget-card,
@@ -956,6 +970,4 @@ body {
   min-height: 36px !important;
   padding: 4px 10px !important;
 }
-
-
 
