@@ -1353,6 +1353,11 @@ body[data-theme="light"] .settings-value {
   color: #334155;
 }
 
+body[data-theme="light"] .budget-category-name span {
+  color: #0f172a;
+  font-weight: 600;
+}
+
 body[data-theme="light"] .entry-title {
   color: #0f172a;
 }
