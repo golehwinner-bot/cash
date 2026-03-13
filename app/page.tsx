@@ -21,6 +21,7 @@ import {
   Popcorn,
   Repeat,
   Shirt,
+  Sparkles,
   ShoppingCart,
   Sun,
   UserCircle2,
@@ -37,6 +38,7 @@ type CategoryId =
   | "auto"
   | "sport"
   | "medicine"
+  | "beauty"
   | "gifts_guests"
   | "home_goods"
   | "clothes_shoes"
@@ -232,6 +234,7 @@ const categories: Array<{ id: CategoryId; label: string }> = [
   { id: "auto", label: "\u0410\u0432\u0442\u043e" },
   { id: "sport", label: "\u0421\u043f\u043e\u0440\u0442" },
   { id: "medicine", label: "\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0430" },
+  { id: "beauty", label: "\u041a\u0440\u0430\u0441\u0430" },
   { id: "gifts_guests", label: "\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043a\u0438 \u0456 \u0433\u043e\u0441\u0442\u0456" },
   { id: "home_goods", label: "\u0422\u043e\u0432\u0430\u0440\u0438 \u0434\u043b\u044f \u0434\u043e\u043c\u0443" },
   { id: "clothes_shoes", label: "\u041e\u0434\u044f\u0433 \u0442\u0430 \u0432\u0437\u0443\u0442\u0442\u044f" },
@@ -275,6 +278,7 @@ const categoryLabelMap: Record<CategoryId, string> = {
   auto: "\u0410\u0432\u0442\u043e",
   sport: "\u0421\u043f\u043e\u0440\u0442",
   medicine: "\u041c\u0435\u0434\u0438\u0446\u0438\u043d\u0430",
+  beauty: "\u041a\u0440\u0430\u0441\u0430",
   gifts_guests: "\u041f\u043e\u0434\u0430\u0440\u0443\u043d\u043a\u0438 \u0456 \u0433\u043e\u0441\u0442\u0456",
   home_goods: "\u0422\u043e\u0432\u0430\u0440\u0438 \u0434\u043b\u044f \u0434\u043e\u043c\u0443",
   clothes_shoes: "\u041e\u0434\u044f\u0433 \u0442\u0430 \u0432\u0437\u0443\u0442\u0442\u044f",
@@ -291,6 +295,7 @@ const categoryVisualMap: Record<CategoryId, { color: string; icon: LucideIcon }>
   auto: { color: "#60A5FA", icon: Car },
   sport: { color: "#A78BFA", icon: Dumbbell },
   medicine: { color: "var(--cat-health)", icon: HeartPulse },
+  beauty: { color: "#FB7185", icon: Sparkles },
   gifts_guests: { color: "var(--cat-shopping)", icon: Gift },
   home_goods: { color: "var(--cat-home)", icon: House },
   clothes_shoes: { color: "#F472B6", icon: Shirt },
@@ -320,6 +325,7 @@ const defaultCategoryLimits: Record<CategoryId, number> = {
   auto: 4000,
   sport: 2000,
   medicine: 3000,
+  beauty: 2000,
   gifts_guests: 2000,
   home_goods: 3000,
   clothes_shoes: 3000,
@@ -417,6 +423,19 @@ export default function Home() {
     const found = scopeOptions.find((item) => item.key === activeScopeKey);
     return found ? found.label : TXT.personalScope;
   }, [scopeOptions, activeScopeKey]);
+  const isActiveScopeOwner = useMemo(() => {
+    if (activeScopeKey === "personal") return true;
+    if (!activeScopeKey.startsWith("room:")) return false;
+
+    const roomId = activeScopeKey.slice(5);
+    const room = households.find((item) => item.id === roomId);
+    return room?.role === "OWNER";
+  }, [activeScopeKey, households]);
+
+  const canDeleteRecord = (createdById?: string) => {
+    if (isActiveScopeOwner) return true;
+    return Boolean(createdById && createdById === currentUserId);
+  };
 
   const loadNotifications = async () => {
     setNotificationsLoading(true);
@@ -1404,7 +1423,7 @@ export default function Home() {
               <div className="expense-table expense-table-scroll">
                 {filteredExpenses.map((expense) => (
                   <div className="expense-row" key={expense.id}>
-                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><div className="entry-actions">{expense.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openExpenseEditModal(expense)}>{TXT.edit}</button> : null}<button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button></div></div>
+                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><div className="entry-actions">{expense.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openExpenseEditModal(expense)}>{TXT.edit}</button> : null}{canDeleteRecord(expense.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>
@@ -1417,7 +1436,7 @@ export default function Home() {
               <div className="income-table expense-table-scroll">
                 {currencyIncomes.map((item) => (
                   <div className="income-row" key={item.id}>
-                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{item.createdById === currentUserId ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
+                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{canDeleteRecord(item.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>
@@ -1478,7 +1497,7 @@ export default function Home() {
               <div className="income-table expense-table-scroll">
                 {incomes.map((income) => (
                   <div className="income-row" key={income.id}>
-                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><div className="entry-actions">{income.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openIncomeEditModal(income)}>{TXT.edit}</button> : null}<button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button></div></div>
+                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><div className="entry-actions">{income.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openIncomeEditModal(income)}>{TXT.edit}</button> : null}{canDeleteRecord(income.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>

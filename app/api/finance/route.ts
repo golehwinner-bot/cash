@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUser } from "@/lib/push";
 
-type ScopeResolution = { householdId: string } | { error: NextResponse };
+type ScopeResolution = { householdId: string; isOwner: boolean } | { error: NextResponse };
 
 const toErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
@@ -114,7 +114,7 @@ const ensurePersonalHousehold = async (userId: string) => {
 const resolveScopeHouseholdId = async (userId: string, scopeKey: string): Promise<ScopeResolution> => {
   if (!scopeKey || scopeKey === "personal") {
     const householdId = await ensurePersonalHousehold(userId);
-    return { householdId };
+    return { householdId, isOwner: true };
   }
 
   if (!scopeKey.startsWith("room:")) {
@@ -128,14 +128,14 @@ const resolveScopeHouseholdId = async (userId: string, scopeKey: string): Promis
 
   const membership = await prisma.householdMember.findUnique({
     where: { userId_householdId: { userId, householdId } },
-    select: { householdId: true },
+    select: { householdId: true, role: true },
   });
 
   if (!membership) {
     return { error: NextResponse.json({ error: "Access denied for this room." }, { status: 403 }) };
   }
 
-  return { householdId };
+  return { householdId, isOwner: membership.role === "OWNER" };
 };
 
 
@@ -721,28 +721,40 @@ export async function DELETE(request: Request) {
     const scope = await resolveScopeHouseholdId(resolved.userId, scopeKey);
     if ("error" in scope) return scope.error;
 
-    if (kind === "expense") {
-      await prisma.expense.deleteMany({ where: { id, householdId: scope.householdId } });
-      return NextResponse.json({ ok: true });
-    }
+    const onlyAuthorFilter = scope.isOwner ? {} : { createdById: resolved.userId };
 
-    if (kind === "currency_income" || kind === "currency_expense") {
-      const deleted = await prisma.currencyIncome.deleteMany({
-        where: {
-          id,
-          householdId: scope.householdId,
-          createdById: resolved.userId,
-        },
+    if (kind === "expense") {
+      const deleted = await prisma.expense.deleteMany({
+        where: { id, householdId: scope.householdId, ...onlyAuthorFilter },
       });
 
       if (deleted.count === 0) {
-        return NextResponse.json({ error: "Лише автор може видаляти цей запис." }, { status: 403 });
+        return NextResponse.json({ error: "Лише автор або власник кімнати може видаляти запис." }, { status: 403 });
       }
 
       return NextResponse.json({ ok: true });
     }
 
-    await prisma.income.deleteMany({ where: { id, householdId: scope.householdId } });
+    if (kind === "currency_income" || kind === "currency_expense") {
+      const deleted = await prisma.currencyIncome.deleteMany({
+        where: { id, householdId: scope.householdId, ...onlyAuthorFilter },
+      });
+
+      if (deleted.count === 0) {
+        return NextResponse.json({ error: "Лише автор або власник кімнати може видаляти запис." }, { status: 403 });
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    const deleted = await prisma.income.deleteMany({
+      where: { id, householdId: scope.householdId, ...onlyAuthorFilter },
+    });
+
+    if (deleted.count === 0) {
+      return NextResponse.json({ error: "Лише автор або власник кімнати може видаляти запис." }, { status: 403 });
+    }
+
     return NextResponse.json({ ok: true });
   } catch (error) {
     return NextResponse.json(
@@ -756,4 +768,3 @@ export async function DELETE(request: Request) {
     );
   }
 }
-
