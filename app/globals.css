@@ -1,4 +1,4 @@
-@import "./theme.css";
+﻿@import "./theme.css";
 
 * {
   box-sizing: border-box;
@@ -131,6 +131,7 @@ button:focus-visible {
 }
 
 .top-bar {
+  position: relative;
   order: 2;
   display: flex;
   align-items: center;
@@ -157,6 +158,7 @@ button:focus-visible {
 }
 
 .profile-toggle {
+  position: relative;
   width: 42px;
   height: 42px;
   border-radius: 999px;
@@ -1905,7 +1907,7 @@ body[data-theme="light"] .push-toggle {
 }
 
 .notifications-wrap {
-  position: relative;
+  position: static;
   z-index: 90;
 }
 
@@ -1927,7 +1929,9 @@ body[data-theme="light"] .push-toggle {
 }
 
 .notifications-popover {
+  position: absolute;
   right: 0;
+  top: calc(100% + 8px);
   left: auto;
   width: min(320px, calc(100vw - 16px));
   z-index: 1200;
@@ -2037,3 +2041,4 @@ body[data-theme="light"] .push-toggle {
   font-size: 11px;
   color: var(--muted);
 }
+
