@@ -1825,3 +1825,46 @@ body[data-theme="light"] .flash-error {
   border-color: rgba(239, 68, 68, 0.5);
   background: rgba(254, 226, 226, 0.92);
 }
+
+
+.settings-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.settings-actions .row-action {
+  min-height: 36px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+
+.push-toggle {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.push-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: #22c55e;
+}
+
+.push-toggle span {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+body[data-theme="light"] .push-toggle {
+  background: rgba(255, 255, 255, 0.96);
+  border-color: #cbd5e1;
+  color: #0f172a;
+}

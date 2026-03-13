@@ -196,6 +196,18 @@ const TXT = {
   defaultScope: "\u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u0437\u0430 \u043c\u043e\u0432\u0447\u0430\u043d\u043d\u044f\u043c",
   account: "\u0410\u043a\u0430\u0443\u043d\u0442",
   signOut: "\u0412\u0438\u0439\u0442\u0438",
+  pushTitle: "Push-\u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f",
+  pushEnable: "\u0423\u0432\u0456\u043c\u043a\u043d\u0443\u0442\u0438 push",
+  pushDisable: "\u0412\u0438\u043c\u043a\u043d\u0443\u0442\u0438 push",
+  pushTest: "\u041d\u0430\u0434\u0456\u0441\u043b\u0430\u0442\u0438 \u0442\u0435\u0441\u0442",
+  pushStateOn: "Push \u0443\u0432\u0456\u043c\u043a\u043d\u0435\u043d\u043e",
+  pushStateOff: "Push \u0432\u0438\u043c\u043a\u043d\u0435\u043d\u043e",
+  pushSubscribed: "Push-\u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f \u0443\u0432\u0456\u043c\u043a\u043d\u0435\u043d\u043e.",
+  pushDisabled: "Push-\u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f \u0432\u0438\u043c\u043a\u043d\u0435\u043d\u043e.",
+  pushTestSent: "\u0422\u0435\u0441\u0442\u043e\u0432\u0435 \u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f \u043d\u0430\u0434\u0456\u0441\u043b\u0430\u043d\u043e.",
+  pushNotSupported: "\u0426\u0435\u0439 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043d\u0435 \u043f\u0456\u0434\u0442\u0440\u0438\u043c\u0443\u0454 push.",
+  pushPermissionDenied: "\u0414\u043e\u0437\u0432\u0456\u043b \u043d\u0430 \u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f \u0432\u0456\u0434\u0445\u0438\u043b\u0435\u043d\u043e.",
+  loading: "\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f...",
 };
 
 const categories: Array<{ id: CategoryId; label: string }> = [
@@ -323,6 +335,15 @@ const formatDate = (value: string) =>
 
 const formatPlain = (value: number) => value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
 
+const urlBase64ToUint8Array = (base64String: string) => {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i += 1) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+};
+
 export default function Home() {
   const [activeTab, setActiveTab] = useState<AppTab>("home");
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
@@ -344,6 +365,9 @@ export default function Home() {
   const [currencyFabOpen, setCurrencyFabOpen] = useState(false);
   const [currencyModalMode, setCurrencyModalMode] = useState<"income" | "expense">("income");
   const [flashMessage, setFlashMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
+  const [pushBusy, setPushBusy] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
   const [editingCurrencyIncomeId, setEditingCurrencyIncomeId] = useState<string | null>(null);
@@ -392,7 +416,37 @@ export default function Home() {
     if (!mounted) return;
     document.body.setAttribute("data-theme", themeMode);
     window.localStorage.setItem("cash:theme", themeMode);
+    setPushSupported(
+      typeof window !== "undefined" &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window,
+    );
   }, [mounted, themeMode]);
+
+  useEffect(() => {
+    if (!pushSupported) {
+      setPushEnabled(false);
+      return;
+    }
+
+    let cancelled = false;
+    const syncPushStatus = async () => {
+      try {
+        const registration = await navigator.serviceWorker.getRegistration("/sw.js")
+          || await navigator.serviceWorker.getRegistration();
+        const subscription = await registration?.pushManager.getSubscription();
+        if (!cancelled) setPushEnabled(Boolean(subscription));
+      } catch {
+        if (!cancelled) setPushEnabled(false);
+      }
+    };
+
+    void syncPushStatus();
+    return () => {
+      cancelled = true;
+    };
+  }, [pushSupported]);
 
   useEffect(() => {
     if (activeTab !== "expenses") setCurrencyFabOpen(false);
@@ -987,6 +1041,107 @@ export default function Home() {
     setCurrencyFabOpen((prev) => !prev);
   };
 
+  const enablePushNotifications = async () => {
+    if (!pushSupported) {
+      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
+      return;
+    }
+
+    setPushBusy(true);
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const vapidResponse = await fetch("/api/push/vapid");
+      if (!vapidResponse.ok) throw new Error("Failed to get VAPID key");
+
+      const vapidData = (await vapidResponse.json()) as { publicKey?: string };
+      const publicKey = String(vapidData.publicKey || "");
+      if (!publicKey) throw new Error("Missing VAPID key");
+
+      let subscription = await registration.pushManager.getSubscription();
+      if (!subscription) {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          setFlashMessage({ type: "error", text: TXT.pushPermissionDenied });
+          return;
+        }
+
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      }
+
+      const subscribeResponse = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subscription: subscription.toJSON() }),
+      });
+
+      if (!subscribeResponse.ok) throw new Error("Failed to save subscription");
+      setPushEnabled(true);
+      setFlashMessage({ type: "success", text: TXT.pushSubscribed });
+    } catch {
+      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const disablePushNotifications = async () => {
+    if (!pushSupported) {
+      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
+      return;
+    }
+
+    setPushBusy(true);
+    try {
+      const registration = await navigator.serviceWorker.getRegistration("/sw.js")
+        || await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: subscription.endpoint }),
+        });
+        await subscription.unsubscribe();
+      }
+      setPushEnabled(false);
+      setFlashMessage({ type: "success", text: TXT.pushDisabled });
+    } catch {
+      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
+  const sendTestPush = async () => {
+    if (!pushSupported) {
+      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
+      return;
+    }
+
+    setPushBusy(true);
+    try {
+      const response = await fetch("/api/push/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Cashflow",
+          body: "??????? push-?????????? ??????",
+          url: "/",
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to send test");
+      setFlashMessage({ type: "success", text: TXT.pushTestSent });
+    } catch {
+      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
+    } finally {
+      setPushBusy(false);
+    }
+  };
+
   const openCurrencyQuickModal = (mode: "income" | "expense") => {
     setCurrencyModalMode(mode);
     setIsCurrencyIncomeModalOpen(true);
@@ -1065,6 +1220,31 @@ export default function Home() {
                     >
                       {scopeOptions.map((scope) => <option key={scope.key} value={scope.key}>{scope.label}</option>)}
                     </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <p className="settings-label">{TXT.pushTitle}</p>
+                    <div className="settings-actions">
+                      <label className="push-toggle">
+                        <input
+                          type="checkbox"
+                          checked={pushEnabled}
+                          disabled={pushBusy || !pushSupported}
+                          onChange={(event) => {
+                            if (event.target.checked) {
+                              void enablePushNotifications();
+                              return;
+                            }
+                            void disablePushNotifications();
+                          }}
+                        />
+                        <span>{pushEnabled ? TXT.pushStateOn : TXT.pushStateOff}</span>
+                      </label>
+                      <button className="row-action" type="button" onClick={sendTestPush} disabled={pushBusy || !pushEnabled}>
+                        {pushBusy ? TXT.loading : TXT.pushTest}
+                      </button>
+                    </div>
+                    {!pushSupported ? <p className="settings-label">{TXT.pushNotSupported}</p> : null}
                   </div>
 
                   <button className="row-action row-action-danger settings-signout" type="button" onClick={() => signOut({ callbackUrl: "/sign-in" })}>{TXT.signOut}</button>

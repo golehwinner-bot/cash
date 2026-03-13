@@ -53,6 +53,7 @@ model User {
   createdExpenses Expense[]         @relation("ExpenseCreatedBy")
   createdIncomes  Income[]          @relation("IncomeCreatedBy")
   currencyIncomes CurrencyIncome[]  @relation("CurrencyIncomeCreatedBy")
+  pushSubscriptions PushSubscription[]
 }
 
 model Household {
@@ -136,6 +137,7 @@ model Income {
 
 model CurrencyIncome {
   id          String    @id @default(cuid())
+  title       String    @default("")
   currency    String
   amount      Float
   date        DateTime
@@ -201,3 +203,16 @@ model VerificationToken {
   @@id([identifier, token])
 }
 
+
+model PushSubscription {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String   @unique
+  p256dh    String
+  authKey   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
