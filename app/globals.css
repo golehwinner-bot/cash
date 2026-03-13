@@ -1,4 +1,4 @@
-﻿@import "./theme.css";
+@import "./theme.css";
 
 * {
   box-sizing: border-box;
@@ -89,6 +89,17 @@ button:focus-visible {
 
 .fab-action:active {
   transform: translateY(1px);
+}
+
+.fab-action-secondary {
+  bottom: 84px;
+  min-width: 210px;
+  border-color: rgba(96, 165, 250, 0.5);
+  background: radial-gradient(circle at 22% 20%, rgba(56, 189, 248, 0.28), rgba(37, 99, 235, 0.34));
+}
+
+.fab-action-secondary:hover {
+  border-color: rgba(125, 211, 252, 0.75);
 }
 
 .header-shell {
@@ -1147,6 +1158,11 @@ body {
   font-size: 16px !important;
 }
 
+.fab-action-secondary {
+  bottom: 68px !important;
+  min-width: 178px !important;
+}
+
 .fab-plus {
   font-size: 21px !important;
 }
@@ -1563,6 +1579,137 @@ body[data-theme="light"] .fab-action:hover {
   background: linear-gradient(115deg, #15803d 0%, #16a34a 58%, #22c55e 100%);
 }
 
+.flash-success {
+  color: #dcfce7;
+  border-color: rgba(74, 222, 128, 0.5);
+  background: rgba(21, 128, 61, 0.78);
+}
+
+.flash-error {
+  color: #fee2e2;
+  border-color: rgba(248, 113, 113, 0.6);
+  background: rgba(153, 27, 27, 0.78);
+}
+
+body[data-theme="light"] .flash-success {
+  color: #14532d;
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(220, 252, 231, 0.96);
+}
+
+body[data-theme="light"] .flash-error {
+  color: #7f1d1d;
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(254, 226, 226, 0.98);
+}
+
+
+.currency-fab-stack {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  z-index: 52;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.currency-fab-trigger {
+  width: 56px;
+  height: 56px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.45);
+  background: radial-gradient(circle at 22% 20%, rgba(74, 222, 128, 0.3), rgba(22, 163, 74, 0.3));
+  color: #defde8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.35), 0 0 0 6px rgba(34, 197, 94, 0.08);
+  cursor: pointer;
+}
+
+.currency-fab-trigger:hover {
+  transform: translateY(-1px);
+  border-color: rgba(74, 222, 128, 0.7);
+}
+
+.currency-fab-option {
+  min-height: 44px;
+  border-radius: 999px;
+  border: 1px solid rgba(74, 222, 128, 0.42);
+  background: rgba(15, 23, 42, 0.92);
+  color: #d1fae5;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(8px) scale(0.96);
+  pointer-events: none;
+}
+
+.currency-fab-stack.open .currency-fab-option {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+.currency-fab-stack.open .currency-fab-option:nth-of-type(1) {
+  transition-delay: 30ms;
+}
+
+.currency-fab-stack.open .currency-fab-option:nth-of-type(2) {
+  transition-delay: 70ms;
+}
+
+.currency-fab-option:hover {
+  background: rgba(22, 163, 74, 0.22);
+  border-color: rgba(74, 222, 128, 0.72);
+}
+
+body[data-theme="light"] .currency-fab-trigger {
+  color: #f0fdf4;
+  border-color: rgba(22, 163, 74, 0.58);
+  background: linear-gradient(115deg, #16a34a 0%, #22c55e 58%, #4ade80 100%);
+  box-shadow: 0 16px 34px rgba(22, 163, 74, 0.32), 0 0 0 6px rgba(34, 197, 94, 0.18);
+}
+
+body[data-theme="light"] .currency-fab-trigger:hover {
+  border-color: rgba(21, 128, 61, 0.82);
+  background: linear-gradient(115deg, #15803d 0%, #16a34a 58%, #22c55e 100%);
+}
+
+body[data-theme="light"] .currency-fab-option {
+  color: #14532d;
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(22, 163, 74, 0.36);
+}
+
+body[data-theme="light"] .currency-fab-option:hover {
+  background: rgba(220, 252, 231, 0.98);
+  border-color: rgba(22, 163, 74, 0.66);
+}
+
+@media (max-width: 900px) {
+  .currency-fab-stack {
+    left: 12px !important;
+    bottom: 12px !important;
+    gap: 8px !important;
+  }
+
+  .currency-fab-trigger {
+    width: 50px !important;
+    height: 50px !important;
+  }
+
+  .currency-fab-option {
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+}
+
+
 .currency-card {
   display: grid;
   gap: 10px;
@@ -1609,6 +1756,12 @@ body[data-theme="light"] .fab-action:hover {
 
 .currency-row strong {
   font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.currency-row span {
+  color: var(--text);
+  font-weight: 600;
 }
 
 body[data-theme="light"] .accordion-toggle {
@@ -1620,4 +1773,9 @@ body[data-theme="light"] .accordion-toggle {
 body[data-theme="light"] .currency-row {
   background: #ffffff;
   border-color: #d9e2ef;
+}
+
+body[data-theme="light"] .currency-row strong,
+body[data-theme="light"] .currency-row span {
+  color: #0f172a;
 }

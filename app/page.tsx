@@ -8,6 +8,7 @@ import {
   Car,
   CircleHelp,
   CreditCard,
+  DollarSign,
   Dumbbell,
   Gift,
   HandCoins,
@@ -71,6 +72,7 @@ type Income = {
 
 type CurrencyIncome = {
   id: string;
+  name: string;
   currency: CurrencyCode;
   amount: number;
   date: string;
@@ -94,6 +96,7 @@ type IncomeForm = {
 };
 
 type CurrencyIncomeForm = {
+  name: string;
   currency: CurrencyCode;
   amount: string;
   date: string;
@@ -162,6 +165,9 @@ const TXT = {
   totalIncome: "\u0421\u0443\u043a\u0443\u043f\u043d\u0438\u0439 \u0434\u043e\u0445\u0456\u0434",
   currencyBalance: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0439 \u0431\u0430\u043b\u0430\u043d\u0441",
   addCurrency: "\u0414\u043e\u0434\u0430\u0442\u0438 \u0432\u0430\u043b\u044e\u0442\u0443",
+  spendCurrency: "\u0421\u043f\u0438\u0441\u0430\u0442\u0438 \u0432\u0430\u043b\u044e\u0442\u0443",
+  notEnoughCurrency: "\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043d\u044c\u043e \u0432\u0430\u043b\u044e\u0442\u0438 \u043d\u0430 \u0440\u0430\u0445\u0443\u043d\u043a\u0443.",
+  currencyExpenseSaved: "\u0412\u0438\u0442\u0440\u0430\u0442\u0443 \u0432\u0430\u043b\u044e\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u043e.",
   currency: "\u0412\u0430\u043b\u044e\u0442\u0430",
   noCurrencyYet: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0445 \u043d\u0430\u0434\u0445\u043e\u0434\u0436\u0435\u043d\u044c \u043f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454.",
   noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
@@ -294,7 +300,7 @@ const initialCurrencyIncomes: CurrencyIncome[] = [];
 
 const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, source: expenseSources[0].id, amount: "", date: "" });
 const defaultIncomeForm = (): IncomeForm => ({ name: "", type: incomeTypes[0].id, category: incomeCategories[0].id, amount: "", date: "" });
-const defaultCurrencyIncomeForm = (): CurrencyIncomeForm => ({ currency: currencyOptions[0].id, amount: "", date: "" });
+const defaultCurrencyIncomeForm = (): CurrencyIncomeForm => ({ name: "", currency: currencyOptions[0].id, amount: "", date: "" });
 const defaultFilters = (): ExpenseFilters => ({ category: "all", dateFrom: "", dateTo: "" });
 
 const currency = new Intl.NumberFormat("uk-UA", {
@@ -325,9 +331,14 @@ export default function Home() {
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isCurrencyIncomeModalOpen, setIsCurrencyIncomeModalOpen] = useState(false);
+  const [currencyFabOpen, setCurrencyFabOpen] = useState(false);
+  const [currencyModalMode, setCurrencyModalMode] = useState<"income" | "expense">("income");
+  const [flashMessage, setFlashMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
   const [editingCurrencyIncomeId, setEditingCurrencyIncomeId] = useState<string | null>(null);
+  const [editingCurrencyMode, setEditingCurrencyMode] = useState<"income" | "expense">("income");
   const [editExpenseForm, setEditExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [editIncomeForm, setEditIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
   const [editCurrencyIncomeForm, setEditCurrencyIncomeForm] = useState<CurrencyIncomeForm>(defaultCurrencyIncomeForm);
@@ -374,6 +385,10 @@ export default function Home() {
   }, [mounted, themeMode]);
 
   useEffect(() => {
+    if (activeTab !== "expenses") setCurrencyFabOpen(false);
+  }, [activeTab]);
+
+  useEffect(() => {
     if (!mounted || !householdsLoaded) return;
 
     const hasActiveScope = scopeOptions.some((scope) => scope.key === activeScopeKey);
@@ -407,13 +422,18 @@ export default function Home() {
 
   useEffect(() => {
     const isAnyModalOpen =
-      isExpenseModalOpen || Boolean(editingExpenseId) || Boolean(editingIncomeId) || Boolean(editingCurrencyIncomeId);
+      isExpenseModalOpen ||
+      isCurrencyIncomeModalOpen ||
+      Boolean(editingExpenseId) ||
+      Boolean(editingIncomeId) ||
+      Boolean(editingCurrencyIncomeId);
     if (!isAnyModalOpen) return;
 
     const previousOverflow = document.body.style.overflow;
     const handleEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setIsExpenseModalOpen(false);
+      setIsCurrencyIncomeModalOpen(false);
       setEditingExpenseId(null);
       setEditingIncomeId(null);
       setEditingCurrencyIncomeId(null);
@@ -425,7 +445,13 @@ export default function Home() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isExpenseModalOpen, editingExpenseId, editingIncomeId, editingCurrencyIncomeId]);
+  }, [isExpenseModalOpen, isCurrencyIncomeModalOpen, editingExpenseId, editingIncomeId, editingCurrencyIncomeId]);
+
+  useEffect(() => {
+    if (!flashMessage) return;
+    const timer = window.setTimeout(() => setFlashMessage(null), 2800);
+    return () => window.clearTimeout(timer);
+  }, [flashMessage]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -748,9 +774,11 @@ export default function Home() {
   const openCurrencyIncomeEditModal = (item: CurrencyIncome) => {
     if (!currentUserId || item.createdById !== currentUserId) return;
     setEditingCurrencyIncomeId(item.id);
+    setEditingCurrencyMode(item.amount < 0 ? "expense" : "income");
     setEditCurrencyIncomeForm({
+      name: item.name,
       currency: item.currency,
-      amount: String(item.amount),
+      amount: String(Math.abs(item.amount)),
       date: item.date,
     });
   };
@@ -760,22 +788,30 @@ export default function Home() {
     if (!editingCurrencyIncomeId) return;
 
     const amountValue = Number(editCurrencyIncomeForm.amount);
-    if (!editCurrencyIncomeForm.currency || !editCurrencyIncomeForm.date || !amountValue || amountValue <= 0) return;
+    if (!editCurrencyIncomeForm.name.trim() || !editCurrencyIncomeForm.currency || !editCurrencyIncomeForm.date || !amountValue || amountValue <= 0) return;
 
     const response = await fetch("/api/finance", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        kind: "currency_income",
+        kind: editingCurrencyMode === "expense" ? "currency_expense" : "currency_income",
         id: editingCurrencyIncomeId,
         scopeKey: activeScopeKey,
+        name: editCurrencyIncomeForm.name.trim(),
         currency: editCurrencyIncomeForm.currency,
         amount: amountValue,
         date: editCurrencyIncomeForm.date,
       }),
     });
 
-    if (!response.ok) return;
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      setFlashMessage({
+        type: "error",
+        text: payload.error || TXT.notEnoughCurrency,
+      });
+      return;
+    }
 
     const data = (await response.json()) as { item?: CurrencyIncome };
     if (data.item) {
@@ -794,7 +830,7 @@ export default function Home() {
   const handleAddCurrencyIncome = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amountValue = Number(currencyIncomeForm.amount);
-    if (!currencyIncomeForm.currency || !currencyIncomeForm.date || !amountValue || amountValue <= 0) return;
+    if (!currencyIncomeForm.name.trim() || !currencyIncomeForm.currency || !currencyIncomeForm.date || !amountValue || amountValue <= 0) return;
 
     const response = await fetch("/api/finance", {
       method: "POST",
@@ -802,6 +838,7 @@ export default function Home() {
       body: JSON.stringify({
         kind: "currency_income",
         scopeKey: activeScopeKey,
+        name: currencyIncomeForm.name.trim(),
         currency: currencyIncomeForm.currency,
         amount: amountValue,
         date: currencyIncomeForm.date,
@@ -813,7 +850,44 @@ export default function Home() {
     const data = (await response.json()) as { item?: CurrencyIncome };
     if (data.item) {
       setCurrencyIncomes((prev) => [data.item as CurrencyIncome, ...prev]);
-      setCurrencyIncomeForm((prev) => ({ ...prev, amount: "" }));
+      setCurrencyIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setIsCurrencyIncomeModalOpen(false);
+    }
+  };
+
+  const handleAddCurrencyExpense = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const amountValue = Number(currencyIncomeForm.amount);
+    if (!currencyIncomeForm.name.trim() || !currencyIncomeForm.currency || !currencyIncomeForm.date || !amountValue || amountValue <= 0) return;
+
+    const response = await fetch("/api/finance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "currency_expense",
+        scopeKey: activeScopeKey,
+        name: currencyIncomeForm.name.trim(),
+        currency: currencyIncomeForm.currency,
+        amount: amountValue,
+        date: currencyIncomeForm.date,
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      setFlashMessage({
+        type: "error",
+        text: payload.error || TXT.notEnoughCurrency,
+      });
+      return;
+    }
+
+    const data = (await response.json()) as { item?: CurrencyIncome };
+    if (data.item) {
+      setCurrencyIncomes((prev) => [data.item as CurrencyIncome, ...prev]);
+      setCurrencyIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setIsCurrencyIncomeModalOpen(false);
+      setFlashMessage({ type: "success", text: TXT.currencyExpenseSaved });
     }
   };
   const handleDeleteExpense = async (id: string) => {
@@ -856,6 +930,16 @@ export default function Home() {
         expenseAmountRef.current?.focus();
       });
     });
+  };
+
+  const handleCurrencyFabToggle = () => {
+    setCurrencyFabOpen((prev) => !prev);
+  };
+
+  const openCurrencyQuickModal = (mode: "income" | "expense") => {
+    setCurrencyModalMode(mode);
+    setIsCurrencyIncomeModalOpen(true);
+    setCurrencyFabOpen(false);
   };
 
   if (status === "loading") return <main className="auth-shell"><div className="auth-card"><h1>{"\u041f\u0435\u0440\u0435\u0432\u0456\u0440\u043a\u0430 \u0441\u0435\u0441\u0456\u0457..."}</h1></div></main>;
@@ -1007,7 +1091,7 @@ export default function Home() {
               <div className="income-table expense-table-scroll">
                 {currencyIncomes.map((item) => (
                   <div className="income-row" key={item.id}>
-                    <div className="entry-top"><strong className="entry-title"><span>{item.currency}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatByCode(item.amount, item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{item.createdById === currentUserId ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
+                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{item.createdById === currentUserId ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>
@@ -1062,15 +1146,6 @@ export default function Home() {
           </article>
 
           <article className="card">
-            <h2>{TXT.addCurrency}</h2>
-            <form className="income-form" onSubmit={handleAddCurrencyIncome}>
-              <label>{TXT.currency}<select value={currencyIncomeForm.currency} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, currency: event.target.value as CurrencyCode }))}>{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
-              <label>{TXT.amount}<input type="number" min="0.01" step="0.01" placeholder="0" value={currencyIncomeForm.amount} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
-              <label>{TXT.date}<input type="date" value={currencyIncomeForm.date} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
-              <button className="button button-primary" type="submit">{TXT.save}</button>
-            </form>
-          </article>
-          <article className="card">
             <p className="section-label">{TXT.totalIncome}</p>
             <p className="summary-pill"><strong>{formatCurrency(totalIncomeAll)}</strong></p>
             {incomes.length === 0 ? <p className="empty-line">{TXT.noIncomes}</p> : (
@@ -1111,6 +1186,24 @@ export default function Home() {
         </div>
       ) : null}
 
+      {isCurrencyIncomeModalOpen ? (
+        <div className="modal-backdrop" onClick={() => setIsCurrencyIncomeModalOpen(false)}>
+          <article className="card modal-card" role="dialog" aria-modal="true" aria-label={currencyModalMode === "income" ? TXT.addCurrency : TXT.spendCurrency} onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{currencyModalMode === "income" ? TXT.addCurrency : TXT.spendCurrency}</h2>
+              <button className="modal-close" type="button" aria-label="\u0417\u0430\u043a\u0440\u0438\u0442\u0438" onClick={() => setIsCurrencyIncomeModalOpen(false)}>{"\u00d7"}</button>
+            </div>
+            <form className="income-form" onSubmit={currencyModalMode === "income" ? handleAddCurrencyIncome : handleAddCurrencyExpense}>
+              <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={currencyIncomeForm.name} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
+              <label>{TXT.currency}<select value={currencyIncomeForm.currency} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, currency: event.target.value as CurrencyCode }))}>{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+              <label>{TXT.amount}<input type="number" min="0.01" step="0.01" placeholder="0" value={currencyIncomeForm.amount} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.date}<input type="date" value={currencyIncomeForm.date} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
+        </div>
+      ) : null}
+
       {editingExpenseId ? (
         <div className="modal-backdrop" onClick={() => setEditingExpenseId(null)}>
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
@@ -1138,6 +1231,7 @@ export default function Home() {
               <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingCurrencyIncomeId(null)}>×</button>
             </div>
             <form className="income-form" onSubmit={handleUpdateCurrencyIncome}>
+              <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={editCurrencyIncomeForm.name} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
               <label>{TXT.currency}<select value={editCurrencyIncomeForm.currency} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, currency: event.target.value as CurrencyCode }))}>{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
               <label>{TXT.amount}<input type="number" min="0.01" step="0.01" placeholder="0" value={editCurrencyIncomeForm.amount} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
               <label>{TXT.date}<input type="date" value={editCurrencyIncomeForm.date} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
@@ -1163,6 +1257,36 @@ export default function Home() {
             </form>
           </article>
         </div>
+      ) : null}
+
+      <div className={`currency-fab-stack ${currencyFabOpen ? "open" : ""}`}>
+        <button
+          className="currency-fab-option"
+          type="button"
+          onClick={() => openCurrencyQuickModal("income")}
+        >
+          {TXT.addCurrency}
+        </button>
+        <button
+          className="currency-fab-option"
+          type="button"
+          onClick={() => openCurrencyQuickModal("expense")}
+        >
+          {TXT.spendCurrency}
+        </button>
+        <button
+          className="currency-fab-trigger"
+          type="button"
+          aria-label={TXT.currency}
+          aria-expanded={currencyFabOpen}
+          onClick={handleCurrencyFabToggle}
+        >
+          <DollarSign size={24} />
+        </button>
+      </div>
+
+      {flashMessage ? (
+        <div className={`flash-toast flash-${flashMessage.type}`}>{flashMessage.text}</div>
       ) : null}
 
       <button className="fab-action" type="button" aria-label={TXT.addExpense} title={TXT.addExpense} onClick={handleFabClick}>
