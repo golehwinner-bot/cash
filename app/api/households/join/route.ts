@@ -24,6 +24,16 @@ const notifyRoomMembers = async (params: {
 
   if (members.length === 0) return;
 
+  await prisma.notification.createMany({
+    data: members.map((member) => ({
+      userId: member.userId,
+      type: "ROOM_DELETED",
+      title: params.title,
+      body: params.body,
+    })),
+  });
+
+
   await Promise.all(
     members.map((member) =>
       sendPushToUser(member.userId, {

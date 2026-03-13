@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { HouseholdMembersPanel } from "./components/household-members-panel";
 import {
+  Bell,
+  CheckCheck,
   Bus,
   Car,
   CircleHelp,
@@ -122,6 +124,14 @@ type FinancePayload = {
 
 type ThemeMode = "dark" | "light";
 
+type AppNotification = {
+  id: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  readAt: string | null;
+};
+
 const TXT = {
   tabHome: "\u0411\u0430\u043b\u0430\u043d\u0441",
   tabExpenses: "\u0412\u0438\u0442\u0440\u0430\u0442\u0438",
@@ -196,6 +206,9 @@ const TXT = {
   defaultScope: "\u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u0437\u0430 \u043c\u043e\u0432\u0447\u0430\u043d\u043d\u044f\u043c",
   account: "\u0410\u043a\u0430\u0443\u043d\u0442",
   signOut: "\u0412\u0438\u0439\u0442\u0438",
+  notifications: "\u0421\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f",
+  noNotifications: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u044c.",
+  markAllRead: "\u041f\u043e\u0437\u043d\u0430\u0447\u0438\u0442\u0438 \u0432\u0441\u0456 \u043f\u0440\u043e\u0447\u0438\u0442\u0430\u043d\u0438\u043c\u0438",
   pushTitle: "Push-\u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f",
   pushEnable: "\u0423\u0432\u0456\u043c\u043a\u043d\u0443\u0442\u0438 push",
   pushDisable: "\u0412\u0438\u043c\u043a\u043d\u0443\u0442\u0438 push",
@@ -360,6 +373,9 @@ export default function Home() {
   const [defaultScopeKey, setDefaultScopeKey] = useState("personal");
   const [themeMode, setThemeMode] = useState<ThemeMode>("dark");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isCurrencyIncomeModalOpen, setIsCurrencyIncomeModalOpen] = useState(false);
   const [currencyFabOpen, setCurrencyFabOpen] = useState(false);
@@ -379,11 +395,13 @@ export default function Home() {
   const [currencyAccordionOpen, setCurrencyAccordionOpen] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
+  const notificationsRef = useRef<HTMLDivElement | null>(null);
   const currencyFabRef = useRef<HTMLDivElement | null>(null);
   const settingsBootstrappedRef = useRef(false);
   const { data: session, status } = useSession();
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
   const currentUserId = session?.user?.id || "";
+  const unreadNotificationsCount = notifications.filter((item) => !item.readAt).length;
 
   const scopeOptions = useMemo(
     () => [
@@ -397,6 +415,28 @@ export default function Home() {
     const found = scopeOptions.find((item) => item.key === activeScopeKey);
     return found ? found.label : TXT.personalScope;
   }, [scopeOptions, activeScopeKey]);
+
+  const loadNotifications = async () => {
+    setNotificationsLoading(true);
+    try {
+      const response = await fetch("/api/notifications", { cache: "no-store" });
+      if (!response.ok) return;
+      const data = (await response.json()) as { notifications: AppNotification[] };
+      setNotifications(Array.isArray(data.notifications) ? data.notifications : []);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    }).catch(() => null);
+
+    await loadNotifications();
+  };
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -500,6 +540,29 @@ export default function Home() {
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [settingsOpen]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+
+    const handleNotificationsPointerDown = (event: MouseEvent) => {
+      if (!notificationsRef.current?.contains(event.target as Node)) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleNotificationsPointerDown);
+    return () => document.removeEventListener("mousedown", handleNotificationsPointerDown);
+  }, [notificationsOpen]);
+
+  useEffect(() => {
+    if (!session?.user) return;
+    void loadNotifications();
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!notificationsOpen) return;
+    void loadNotifications();
+  }, [notificationsOpen]);
 
   useEffect(() => {
     const isAnyModalOpen =
@@ -1147,12 +1210,54 @@ export default function Home() {
           </section>
 
           <header className="top-bar">
+            <div className="notifications-wrap" ref={notificationsRef}>
+              <button
+                className="profile-toggle"
+                type="button"
+                aria-label={TXT.notifications}
+                onClick={() => {
+                  setNotificationsOpen((prev) => !prev);
+                  setSettingsOpen(false);
+                }}
+              >
+                <Bell size={20} />
+                {unreadNotificationsCount > 0 ? <span className="notif-badge">{unreadNotificationsCount}</span> : null}
+              </button>
+              {notificationsOpen ? (
+                <div className="settings-popover notifications-popover">
+                  <div className="notifications-head">
+                    <p className="settings-title">{TXT.notifications}</p>
+                    <button className="row-action row-action-compact notifications-mark-btn" type="button" onClick={() => void markAllNotificationsRead()}>
+                      <CheckCheck size={14} />
+                    </button>
+                  </div>
+                  {notificationsLoading ? (
+                    <p className="empty-line">{TXT.loading}</p>
+                  ) : notifications.length === 0 ? (
+                    <p className="empty-line">{TXT.noNotifications}</p>
+                  ) : (
+                    <div className="notifications-list">
+                      {notifications.map((item) => (
+                        <div key={item.id} className={`notification-item ${item.readAt ? "" : "notification-item-unread"}`}>
+                          <strong>{item.title}</strong>
+                          <p>{item.body}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
             <div className="settings-wrap" ref={settingsRef}>
               <button
                 className="profile-toggle"
                 type="button"
                 aria-label={TXT.settings}
-                onClick={() => setSettingsOpen((prev) => !prev)}
+                onClick={() => {
+                  setSettingsOpen((prev) => !prev);
+                  setNotificationsOpen(false);
+                }}
               >
                 <UserCircle2 size={22} />
               </button>
@@ -1506,3 +1611,5 @@ export default function Home() {
     </main>
   );
 }
+
+

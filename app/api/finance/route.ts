@@ -84,7 +84,7 @@ const ensurePersonalHousehold = async (userId: string) => {
   const created = await prisma.$transaction(async (tx) => {
     const household = await tx.household.create({
       data: {
-        name: "Р С›РЎРѓР С•Р В±Р С‘РЎРѓРЎвЂљР С‘Р в„– Р В±РЎР‹Р Т‘Р В¶Р ВµРЎвЂљ",
+        name: "Особистий",
         personalOwnerId: userId,
       },
       select: { id: true },
@@ -156,9 +156,10 @@ const notifyHouseholdExpenseCreated = async (params: {
 
   if (members.length === 0) return;
 
+
   const payload = {
-    title: "РќРѕРІР° РІРёС‚СЂР°С‚Р°",
-    body: `${params.authorName}: ${params.title} - ${params.amount} РіСЂРЅ`,
+    title: "Нова витрата",
+    body: `${params.authorName}: ${params.title} - ${params.amount} грн`,
     url: "/",
   };
 
@@ -184,6 +185,16 @@ const notifyHouseholdMembers = async (params: {
   });
 
   if (members.length === 0) return;
+
+  await prisma.notification.createMany({
+    data: members.map((member) => ({
+      userId: member.userId,
+      type: "ROOM_DELETED",
+      title: params.title,
+      body: params.body,
+    })),
+  });
+
 
   await Promise.all(
     members.map((member) =>
@@ -311,7 +322,7 @@ export async function POST(request: Request) {
         include: { createdBy: { select: { name: true, email: true } } },
       });
 
-      const authorName = created.createdBy.name || created.createdBy.email || "РљРѕСЂРёСЃС‚СѓРІР°С‡";
+      const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
       if (scopeKey.startsWith("room:")) {
         void notifyHouseholdExpenseCreated({
           householdId: scope.householdId,
@@ -507,7 +518,7 @@ export async function PATCH(request: Request) {
       });
 
       if (updated.count === 0) {
-        return NextResponse.json({ error: "Р вЂєР С‘РЎв‚¬Р Вµ Р В°Р Р†РЎвЂљР С•РЎР‚ Р СР С•Р В¶Р Вµ РЎР‚Р ВµР Т‘Р В°Р С–РЎС“Р Р†Р В°РЎвЂљР С‘ РЎвЂ Р ВµР в„– Р В·Р В°Р С—Р С‘РЎРѓ." }, { status: 403 });
+        return NextResponse.json({ error: "Лише автор може редагувати цей запис." }, { status: 403 });
       }
 
       const item = await prisma.expense.findUnique({
@@ -561,7 +572,7 @@ export async function PATCH(request: Request) {
       });
 
       if (updated.count === 0) {
-        return NextResponse.json({ error: "Р вЂєР С‘РЎв‚¬Р Вµ Р В°Р Р†РЎвЂљР С•РЎР‚ Р СР С•Р В¶Р Вµ РЎР‚Р ВµР Т‘Р В°Р С–РЎС“Р Р†Р В°РЎвЂљР С‘ РЎвЂ Р ВµР в„– Р В·Р В°Р С—Р С‘РЎРѓ." }, { status: 403 });
+        return NextResponse.json({ error: "Лише автор може редагувати цей запис." }, { status: 403 });
       }
 
       const item = await prisma.income.findUnique({
@@ -725,7 +736,7 @@ export async function DELETE(request: Request) {
       });
 
       if (deleted.count === 0) {
-        return NextResponse.json({ error: "Р вЂєР С‘РЎв‚¬Р Вµ Р В°Р Р†РЎвЂљР С•РЎР‚ Р СР С•Р В¶Р Вµ Р Р†Р С‘Р Т‘Р В°Р В»Р С‘РЎвЂљР С‘ РЎвЂ Р ВµР в„– Р В·Р В°Р С—Р С‘РЎРѓ." }, { status: 403 });
+        return NextResponse.json({ error: "Лише автор може видаляти цей запис." }, { status: 403 });
       }
 
       return NextResponse.json({ ok: true });
