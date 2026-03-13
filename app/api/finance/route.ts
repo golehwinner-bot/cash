@@ -190,6 +190,7 @@ export async function GET(request: Request) {
       })),
       currencyIncomes: currencyIncomes.map((item) => ({
         id: item.id,
+        name: item.currency,
         currency: item.currency,
         amount: item.amount,
         date: formatDateIso(item.date),
@@ -309,7 +310,8 @@ export async function POST(request: Request) {
     }
 
 
-    if (kind === "currency_income") {
+    if (kind === "currency_income" || kind === "currency_expense") {
+      const name = String(body.name ?? "").trim();
       const currency = String(body.currency ?? "").trim().toUpperCase();
       const amount = Number(body.amount ?? 0);
       const date = String(body.date ?? "");
@@ -318,10 +320,23 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid currency income payload." }, { status: 400 });
       }
 
+      let signedAmount = amount;
+      if (kind === "currency_expense") {
+        const summary = await prisma.currencyIncome.aggregate({
+          where: { householdId: scope.householdId, currency },
+          _sum: { amount: true },
+        });
+        const available = Number(summary._sum.amount ?? 0);
+        if (available < amount) {
+          return NextResponse.json({ error: "Insufficient currency balance." }, { status: 400 });
+        }
+        signedAmount = -amount;
+      }
+
       const created = await prisma.currencyIncome.create({
         data: {
           currency,
-          amount,
+          amount: signedAmount,
           date: new Date(date),
           householdId: scope.householdId,
           createdById: resolved.userId,
@@ -333,6 +348,7 @@ export async function POST(request: Request) {
         {
           item: {
             id: created.id,
+            name: name || created.currency,
             currency: created.currency,
             amount: created.amount,
             date: formatDateIso(created.date),
@@ -478,8 +494,9 @@ export async function PATCH(request: Request) {
     }
 
 
-    if (kind === "currency_income") {
+    if (kind === "currency_income" || kind === "currency_expense") {
       const id = String(body.id ?? "").trim();
+      const name = String(body.name ?? "").trim();
       const currency = String(body.currency ?? "").trim().toUpperCase();
       const amount = Number(body.amount ?? 0);
       const date = String(body.date ?? "");
@@ -488,22 +505,42 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Invalid currency income payload." }, { status: 400 });
       }
 
-      const updated = await prisma.currencyIncome.updateMany({
+      const existing = await prisma.currencyIncome.findFirst({
         where: {
           id,
           householdId: scope.householdId,
           createdById: resolved.userId,
         },
+        select: { id: true, amount: true, currency: true },
+      });
+
+      if (!existing) {
+        return NextResponse.json({ error: "Only the author can edit this record." }, { status: 403 });
+      }
+
+      let signedAmount = amount;
+      if (kind === "currency_expense") {
+        const summary = await prisma.currencyIncome.aggregate({
+          where: { householdId: scope.householdId, currency },
+          _sum: { amount: true },
+        });
+        const currentTotal = Number(summary._sum.amount ?? 0);
+        const existingInTarget = existing.currency === currency ? existing.amount : 0;
+        const available = currentTotal - existingInTarget;
+        if (available < amount) {
+          return NextResponse.json({ error: "Insufficient currency balance." }, { status: 400 });
+        }
+        signedAmount = -amount;
+      }
+
+      await prisma.currencyIncome.update({
+        where: { id },
         data: {
           currency,
-          amount,
+          amount: signedAmount,
           date: new Date(date),
         },
       });
-
-      if (updated.count === 0) {
-        return NextResponse.json({ error: "Лише автор може редагувати цей запис." }, { status: 403 });
-      }
 
       const item = await prisma.currencyIncome.findUnique({
         where: { id },
@@ -517,6 +554,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({
         item: {
           id: item.id,
+          name: name || item.currency,
           currency: item.currency,
           amount: item.amount,
           date: formatDateIso(item.date),
@@ -571,7 +609,7 @@ export async function DELETE(request: Request) {
     const kind = searchParams.get("kind") ?? "";
     const id = searchParams.get("id") ?? "";
 
-    if (!id || (kind !== "expense" && kind !== "income" && kind !== "currency_income")) {
+    if (!id || (kind !== "expense" && kind !== "income" && kind !== "currency_income" && kind !== "currency_expense")) {
       return NextResponse.json({ error: "Invalid delete payload." }, { status: 400 });
     }
 
@@ -583,7 +621,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ ok: true });
     }
 
-    if (kind === "currency_income") {
+    if (kind === "currency_income" || kind === "currency_expense") {
       const deleted = await prisma.currencyIncome.deleteMany({
         where: {
           id,
@@ -613,3 +651,4 @@ export async function DELETE(request: Request) {
     );
   }
 }
+
