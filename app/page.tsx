@@ -449,6 +449,25 @@ export default function Home() {
     }
   };
 
+  const markNotificationRead = async (id: string) => {
+    setNotifications((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, readAt: item.readAt || new Date().toISOString() } : item)),
+    );
+
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    }).catch(() => null);
+  };
+
+  const formatNotificationTime = (iso: string) =>
+    new Intl.DateTimeFormat("uk-UA", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(iso));
   const markAllNotificationsRead = async () => {
     await fetch("/api/notifications", {
       method: "PATCH",
@@ -583,6 +602,10 @@ export default function Home() {
   useEffect(() => {
     if (!notificationsOpen) return;
     void loadNotifications();
+    const timer = window.setInterval(() => {
+      void loadNotifications();
+    }, 20000);
+    return () => window.clearInterval(timer);
   }, [notificationsOpen]);
 
   useEffect(() => {
@@ -1257,9 +1280,11 @@ export default function Home() {
                 <div className="settings-popover notifications-popover">
                   <div className="notifications-head">
                     <p className="settings-title">{TXT.notifications}</p>
-                    <button className="row-action row-action-compact notifications-mark-btn" type="button" onClick={() => void markAllNotificationsRead()}>
-                      <CheckCheck size={14} />
-                    </button>
+                    {unreadNotificationsCount > 0 ? (
+                      <button className="row-action row-action-compact notifications-mark-btn" type="button" onClick={() => void markAllNotificationsRead()}>
+                        <CheckCheck size={14} />
+                      </button>
+                    ) : null}
                   </div>
                   {notificationsLoading ? (
                     <p className="empty-line">{TXT.loading}</p>
@@ -1268,10 +1293,20 @@ export default function Home() {
                   ) : (
                     <div className="notifications-list">
                       {notifications.map((item) => (
-                        <div key={item.id} className={`notification-item ${item.readAt ? "" : "notification-item-unread"}`}>
+                        <button
+                          key={item.id}
+                          className={`notification-item ${item.readAt ? "" : "notification-item-unread"}`}
+                          type="button"
+                          onClick={() => {
+                            if (!item.readAt) {
+                              void markNotificationRead(item.id);
+                            }
+                          }}
+                        >
                           <strong>{item.title}</strong>
                           <p>{item.body}</p>
-                        </div>
+                          <span className="notification-item-time">{formatNotificationTime(item.createdAt)}</span>
+                        </button>
                       ))}
                     </div>
                   )}

@@ -2019,3 +2019,21 @@ body[data-theme="light"] .push-toggle {
   white-space: normal;
 }
 
+
+.notification-item {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.notification-item:hover {
+  border-color: rgba(74, 222, 128, 0.4);
+  background: rgba(22, 163, 74, 0.08);
+}
+
+.notification-item-time {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
