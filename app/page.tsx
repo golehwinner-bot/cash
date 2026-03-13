@@ -384,6 +384,7 @@ export default function Home() {
   const [pushBusy, setPushBusy] = useState(false);
   const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
   const [editingCurrencyIncomeId, setEditingCurrencyIncomeId] = useState<string | null>(null);
@@ -394,6 +395,7 @@ export default function Home() {
   const [householdsLoaded, setHouseholdsLoaded] = useState(false);
   const [currencyAccordionOpen, setCurrencyAccordionOpen] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
+  const addExpenseInFlightRef = useRef(false);
   const settingsRef = useRef<HTMLDivElement | null>(null);
   const notificationsRef = useRef<HTMLDivElement | null>(null);
   const currencyFabRef = useRef<HTMLDivElement | null>(null);
@@ -788,31 +790,40 @@ export default function Home() {
 
   const handleAddExpense = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (addExpenseInFlightRef.current || isAddingExpense) return;
+
     const amountValue = Number(expenseForm.amount);
     if (!expenseForm.name.trim() || !expenseForm.date || !amountValue || amountValue <= 0) return;
 
-    const response = await fetch("/api/finance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        kind: "expense",
-        scopeKey: activeScopeKey,
-        name: expenseForm.name.trim(),
-        category: expenseForm.category,
-        source: expenseForm.source,
-        amount: amountValue,
-        date: expenseForm.date,
-      }),
-    });
+    addExpenseInFlightRef.current = true;
+    setIsAddingExpense(true);
+    try {
+      const response = await fetch("/api/finance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind: "expense",
+          scopeKey: activeScopeKey,
+          name: expenseForm.name.trim(),
+          category: expenseForm.category,
+          source: expenseForm.source,
+          amount: amountValue,
+          date: expenseForm.date,
+        }),
+      });
 
-    if (!response.ok) return;
+      if (!response.ok) return;
 
-    const data = (await response.json()) as { item?: Expense };
-    if (data.item) {
-      setExpenses((prev) => [data.item as Expense, ...prev]);
-      setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
-      setIsExpenseModalOpen(false);
-      setFlashMessage({ type: "success", text: TXT.expenseSaved });
+      const data = (await response.json()) as { item?: Expense };
+      if (data.item) {
+        setExpenses((prev) => [data.item as Expense, ...prev]);
+        setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
+        setIsExpenseModalOpen(false);
+        setFlashMessage({ type: "success", text: TXT.expenseSaved });
+      }
+    } finally {
+      addExpenseInFlightRef.current = false;
+      setIsAddingExpense(false);
     }
   };
 
@@ -1495,7 +1506,7 @@ export default function Home() {
               <label>{TXT.expenseSource}<select value={expenseForm.source} onChange={(event) => setExpenseForm((prev) => ({ ...prev, source: event.target.value as ExpenseSourceId }))}>{expenseSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
               <label>{TXT.amount}<input ref={expenseAmountRef} type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
               <label>{TXT.date}<input type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
-              <button className="button button-primary" type="submit">{TXT.save}</button>
+              <button className="button button-primary" type="submit" disabled={isAddingExpense}>{isAddingExpense ? "Зберігаємо..." : TXT.save}</button>
             </form>
           </article>
         </div>
