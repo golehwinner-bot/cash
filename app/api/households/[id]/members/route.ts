@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { sendPushToUser } from "@/lib/push";
@@ -143,7 +143,7 @@ export async function DELETE(request: Request, context: Params) {
     where: { userId_householdId: { userId: session.user.id, householdId } },
   });
 
-  if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
+  if (!membership) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -165,6 +165,13 @@ export async function DELETE(request: Request, context: Params) {
 
   if (target.role === "OWNER") {
     return NextResponse.json({ error: "Owner cannot be removed." }, { status: 400 });
+  }
+
+  const canManageMembers = membership.role === "OWNER" || membership.role === "ADMIN";
+  const isSelfRemoval = target.user.id === session.user.id;
+
+  if (!canManageMembers && !isSelfRemoval) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   await prisma.householdMember.delete({ where: { id: target.id } });

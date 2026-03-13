@@ -1868,3 +1868,40 @@ body[data-theme="light"] .push-toggle {
   border-color: #cbd5e1;
   color: #0f172a;
 }
+
+.room-accordion-list {
+  gap: 12px;
+}
+
+.room-accordion-card {
+  padding: 8px;
+}
+
+.room-accordion-toggle {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.room-accordion-title {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+}
+
+.room-accordion-title small {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.room-accordion-content {
+  margin-top: 10px;
+  display: grid;
+  gap: 10px;
+}
+
+.member-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

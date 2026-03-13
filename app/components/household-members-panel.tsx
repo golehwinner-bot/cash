@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 
 type Household = {
   id: string;
@@ -34,7 +35,7 @@ type AppNotification = {
 };
 
 const TXT = {
-  section: "Кімната",
+  section: "Кімнати",
   createTitle: "Створити нову кімнату",
   roomName: "Назва кімнати",
   roomNamePlaceholder: "Наприклад, Бюджет родини",
@@ -43,6 +44,7 @@ const TXT = {
   loading: "Завантаження...",
   emptyHouseholds: "У вас поки немає кімнат. Створіть першу кімнату вище.",
   emptyMembers: "У цій кімнаті поки немає учасників.",
+  membersTitle: "Учасники",
   role_OWNER: "Власник",
   role_ADMIN: "Адміністратор",
   role_MEMBER: "Учасник",
@@ -75,6 +77,11 @@ const TXT = {
   ownerOnly: "Лише власник може редагувати або видаляти кімнату.",
   renameError: "Не вдалося змінити назву кімнати.",
   deleteError: "Не вдалося видалити кімнату.",
+  removeMember: "Видалити",
+  leaveRoom: "Вийти",
+  removingMember: "Видаляємо...",
+  removeMemberError: "Не вдалося видалити учасника.",
+  leaveRoomConfirm: "Вийти з кімнати?",
 };
 
 const roleLabel = (role: Member["role"] | Household["role"] | JoinRole) => {
@@ -92,6 +99,9 @@ const formatStamp = (iso: string) =>
   });
 
 export function HouseholdMembersPanel() {
+  const { data: session } = useSession();
+  const currentUserId = session?.user?.id || "";
+
   const [households, setHouseholds] = useState<Household[]>([]);
   const [membersByHousehold, setMembersByHousehold] = useState<Record<string, Member[]>>({});
   const [joinCodes, setJoinCodes] = useState<Record<string, JoinCodeState | null>>({});
@@ -109,6 +119,8 @@ export function HouseholdMembersPanel() {
   const [editingHouseholdId, setEditingHouseholdId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [deletingHouseholdId, setDeletingHouseholdId] = useState<string | null>(null);
+  const [expandedHouseholdId, setExpandedHouseholdId] = useState<string | null>(null);
+  const [removingMemberKey, setRemovingMemberKey] = useState<string | null>(null);
 
   const loadNotifications = async () => {
     const response = await fetch("/api/notifications", { cache: "no-store" });
@@ -124,6 +136,12 @@ export function HouseholdMembersPanel() {
     const householdsData = (await householdsResponse.json()) as { households: Household[] };
     const list = Array.isArray(householdsData.households) ? householdsData.households : [];
     setHouseholds(list);
+
+    setExpandedHouseholdId((prev) => {
+      if (list.length === 0) return null;
+      if (prev && list.some((item) => item.id === prev)) return prev;
+      return list[0].id;
+    });
 
     setRoleByHousehold((prev) => {
       const next = { ...prev };
@@ -363,6 +381,35 @@ export function HouseholdMembersPanel() {
     }
   };
 
+  const handleRemoveMember = async (household: Household, member: Member) => {
+    const isSelf = member.userId === currentUserId;
+    if (isSelf && !confirm(TXT.leaveRoomConfirm)) return;
+
+    const key = `${household.id}:${member.userId}`;
+    setRemovingMemberKey(key);
+    setError("");
+
+    try {
+      const response = await fetch(`/api/households/${household.id}/members`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: member.userId }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({ error: TXT.removeMemberError }));
+        setError(body.error || TXT.removeMemberError);
+        return;
+      }
+
+      await load();
+    } catch {
+      setError(TXT.removeMemberError);
+    } finally {
+      setRemovingMemberKey(null);
+    }
+  };
+
   const markAllNotificationsRead = async () => {
     await fetch("/api/notifications", {
       method: "PATCH",
@@ -455,147 +502,195 @@ export function HouseholdMembersPanel() {
       {!loading && households.length === 0 ? <p className="empty-line">{TXT.emptyHouseholds}</p> : null}
 
       {!loading && households.length > 0 ? (
-        <div className="household-list">
+        <div className="household-list room-accordion-list">
           {households.map((household) => {
             const members = membersByHousehold[household.id] ?? [];
             const canManageCodes = household.role === "OWNER" || household.role === "ADMIN";
+            const canManageMembers = household.role === "OWNER" || household.role === "ADMIN";
             const isOwner = household.role === "OWNER";
+            const canLeaveRoom = household.role !== "OWNER";
             const codeInfo = joinCodes[household.id] ?? null;
             const isBusy = busyHouseholdId === household.id;
             const isDeleting = deletingHouseholdId === household.id;
             const isEditing = editingHouseholdId === household.id;
+            const expanded = expandedHouseholdId === household.id;
 
             return (
-              <section key={household.id} className="household-card">
-                <div className="household-head">
-                  {isEditing ? (
-                    <div className="invite-controls">
-                      <label>
-                        {TXT.roomName}
-                        <input
-                          type="text"
-                          value={editingName}
-                          onChange={(event) => setEditingName(event.target.value)}
-                          required
-                        />
-                      </label>
+              <section key={household.id} className="household-card room-accordion-card">
+                <button
+                  className="accordion-toggle room-accordion-toggle"
+                  type="button"
+                  onClick={() => setExpandedHouseholdId((prev) => (prev === household.id ? null : household.id))}
+                >
+                  <span className="room-accordion-title">
+                    <strong>{household.name}</strong>
+                    <small>{TXT.myRole}: {roleLabel(household.role)}</small>
+                  </span>
+                  <span>{expanded ? "−" : "+"}</span>
+                </button>
+
+                {expanded ? (
+                  <div className="accordion-content room-accordion-content">
+                    {isEditing ? (
+                      <div className="invite-controls">
+                        <label>
+                          {TXT.roomName}
+                          <input
+                            type="text"
+                            value={editingName}
+                            onChange={(event) => setEditingName(event.target.value)}
+                            required
+                          />
+                        </label>
+                        <div className="invite-actions">
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            onClick={() => handleRenameRoom(household.id)}
+                            disabled={isBusy}
+                          >
+                            {TXT.saveName}
+                          </button>
+                          <button
+                            className="button button-secondary"
+                            type="button"
+                            onClick={() => {
+                              setEditingHouseholdId(null);
+                              setEditingName("");
+                            }}
+                          >
+                            {TXT.cancel}
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {isOwner ? (
                       <div className="invite-actions">
-                        <button
-                          className="button button-primary"
-                          type="button"
-                          onClick={() => handleRenameRoom(household.id)}
-                          disabled={isBusy}
-                        >
-                          {TXT.saveName}
-                        </button>
                         <button
                           className="button button-secondary"
                           type="button"
                           onClick={() => {
-                            setEditingHouseholdId(null);
-                            setEditingName("");
+                            setEditingHouseholdId(household.id);
+                            setEditingName(household.name);
                           }}
                         >
-                          {TXT.cancel}
+                          {TXT.rename}
                         </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <strong>{household.name}</strong>
-                      <span>{TXT.myRole}: {roleLabel(household.role)}</span>
-                    </>
-                  )}
-                </div>
-
-                {isOwner ? (
-                  <div className="invite-actions">
-                    <button
-                      className="button button-secondary"
-                      type="button"
-                      onClick={() => {
-                        setEditingHouseholdId(household.id);
-                        setEditingName(household.name);
-                      }}
-                    >
-                      {TXT.rename}
-                    </button>
-                    <button
-                      className="button button-secondary"
-                      type="button"
-                      onClick={() => handleDeleteRoom(household.id)}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? TXT.deletingRoom : TXT.deleteRoom}
-                    </button>
-                  </div>
-                ) : (
-                  <p className="empty-line">{TXT.ownerOnly}</p>
-                )}
-
-                {canManageCodes ? (
-                  <div className="invite-controls">
-                    <label>
-                      {TXT.inviteRole}
-                      <select
-                        value={roleByHousehold[household.id] || "MEMBER"}
-                        onChange={(event) =>
-                          setRoleByHousehold((prev) => ({
-                            ...prev,
-                            [household.id]: event.target.value as JoinRole,
-                          }))
-                        }
-                      >
-                        <option value="MEMBER">{TXT.role_MEMBER}</option>
-                        <option value="ADMIN">{TXT.role_ADMIN}</option>
-                      </select>
-                    </label>
-
-                    <div className="invite-actions">
-                      <button
-                        className="button button-primary"
-                        type="button"
-                        onClick={() => handleGenerateCode(household.id)}
-                        disabled={isBusy}
-                      >
-                        {isBusy ? TXT.generatingCode : TXT.generateCode}
-                      </button>
-
-                      {codeInfo ? (
                         <button
                           className="button button-secondary"
                           type="button"
-                          onClick={() => handleClearCode(household.id)}
-                          disabled={isBusy}
+                          onClick={() => handleDeleteRoom(household.id)}
+                          disabled={isDeleting}
                         >
-                          {isBusy ? TXT.clearingCode : TXT.clearCode}
+                          {isDeleting ? TXT.deletingRoom : TXT.deleteRoom}
                         </button>
-                      ) : null}
-                    </div>
+                      </div>
+                    ) : (
+                      <p className="empty-line">{TXT.ownerOnly}</p>
+                    )}
 
-                    {codeInfo ? (
-                      <p className="summary-pill">
-                        {TXT.code}: <strong>{codeInfo.code}</strong> | {TXT.inviteRole}: {roleLabel(codeInfo.role)} | {TXT.expiresAt}: {new Date(codeInfo.expiresAt).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}
-                      </p>
+                    {canManageCodes ? (
+                      <div className="invite-controls">
+                        <label>
+                          {TXT.inviteRole}
+                          <select
+                            value={roleByHousehold[household.id] || "MEMBER"}
+                            onChange={(event) =>
+                              setRoleByHousehold((prev) => ({
+                                ...prev,
+                                [household.id]: event.target.value as JoinRole,
+                              }))
+                            }
+                          >
+                            <option value="MEMBER">{TXT.role_MEMBER}</option>
+                            <option value="ADMIN">{TXT.role_ADMIN}</option>
+                          </select>
+                        </label>
+
+                        <div className="invite-actions">
+                          <button
+                            className="button button-primary"
+                            type="button"
+                            onClick={() => handleGenerateCode(household.id)}
+                            disabled={isBusy}
+                          >
+                            {isBusy ? TXT.generatingCode : TXT.generateCode}
+                          </button>
+
+                          {codeInfo ? (
+                            <button
+                              className="button button-secondary"
+                              type="button"
+                              onClick={() => handleClearCode(household.id)}
+                              disabled={isBusy}
+                            >
+                              {isBusy ? TXT.clearingCode : TXT.clearCode}
+                            </button>
+                          ) : null}
+                        </div>
+
+                        {codeInfo ? (
+                          <p className="summary-pill">
+                            {TXT.code}: <strong>{codeInfo.code}</strong> | {TXT.inviteRole}: {roleLabel(codeInfo.role)} | {TXT.expiresAt}: {new Date(codeInfo.expiresAt).toLocaleTimeString("uk-UA", { hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        ) : null}
+                      </div>
                     ) : null}
+
+                    {canLeaveRoom ? (
+                      <div className="invite-actions">
+                        <button
+                          className="row-action row-action-danger"
+                          type="button"
+                          onClick={() => {
+                            const selfMember = members.find((item) => item.userId === currentUserId);
+                            if (selfMember) void handleRemoveMember(household, selfMember);
+                          }}
+                          disabled={removingMemberKey === `${household.id}:${currentUserId}`}
+                        >
+                          {removingMemberKey === `${household.id}:${currentUserId}` ? TXT.removingMember : TXT.leaveRoom}
+                        </button>
+                      </div>
+                    ) : null}
+
+                    <p className="section-label">{TXT.membersTitle}</p>
+                    {members.length === 0 ? (
+                      <p className="empty-line">{TXT.emptyMembers}</p>
+                    ) : (
+                      <div className="household-members">
+                        {members.map((member) => {
+                          const isSelf = member.userId === currentUserId;
+                          const canRemoveTarget =
+                            canManageMembers && member.role !== "OWNER" && !isSelf;
+                          const rowBusy = removingMemberKey === `${household.id}:${member.userId}`;
+
+                          return (
+                            <div className="household-member-row" key={member.id}>
+                              <div>
+                                <strong>{member.name?.trim() || member.email}</strong>
+                                <p>{member.email}</p>
+                              </div>
+                              <div className="member-row-actions">
+                                <span>{roleLabel(member.role)}</span>
+                                {canRemoveTarget ? (
+                                  <button
+                                    className="row-action row-action-danger row-action-compact"
+                                    type="button"
+                                    onClick={() => void handleRemoveMember(household, member)}
+                                    disabled={rowBusy}
+                                  >
+                                    {rowBusy ? TXT.removingMember : (isSelf ? TXT.leaveRoom : TXT.removeMember)}
+                                  </button>
+                                ) : null}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : null}
-
-                {members.length === 0 ? (
-                  <p className="empty-line">{TXT.emptyMembers}</p>
-                ) : (
-                  <div className="household-members">
-                    {members.map((member) => (
-                      <div className="household-member-row" key={member.id}>
-                        <div>
-                          <strong>{member.name?.trim() || member.email}</strong>
-                          <p>{member.email}</p>
-                        </div>
-                        <span>{roleLabel(member.role)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </section>
             );
           })}
