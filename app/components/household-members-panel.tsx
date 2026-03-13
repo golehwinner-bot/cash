@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -35,53 +35,53 @@ type AppNotification = {
 };
 
 const TXT = {
-  section: "Кімнати",
-  createTitle: "Створити нову кімнату",
-  roomName: "Назва кімнати",
-  roomNamePlaceholder: "Наприклад, Бюджет родини",
-  create: "Створити",
-  creating: "Створюємо...",
-  loading: "Завантаження...",
-  emptyHouseholds: "У вас поки немає кімнат. Створіть першу кімнату вище.",
-  emptyMembers: "У цій кімнаті поки немає учасників.",
-  membersTitle: "Учасники",
-  role_OWNER: "Власник",
-  role_ADMIN: "Адміністратор",
-  role_MEMBER: "Учасник",
-  myRole: "Моя роль",
-  createError: "Не вдалося створити кімнату.",
-  inviteTitle: "Код запрошення",
-  inviteRole: "Роль для нового учасника",
-  generateCode: "Згенерувати код",
-  generatingCode: "Генеруємо...",
-  clearCode: "Скасувати код",
-  clearingCode: "Скасовуємо...",
-  code: "Код",
-  expiresAt: "Дійсний до",
-  joinTitle: "Приєднатись по коду",
-  joinCodeLabel: "6-значний код",
+  section: "РљС–РјРЅР°С‚Рё",
+  createTitle: "РЎС‚РІРѕСЂРёС‚Рё РЅРѕРІСѓ РєС–РјРЅР°С‚Сѓ",
+  roomName: "РќР°Р·РІР° РєС–РјРЅР°С‚Рё",
+  roomNamePlaceholder: "РќР°РїСЂРёРєР»Р°Рґ, Р‘СЋРґР¶РµС‚ СЂРѕРґРёРЅРё",
+  create: "РЎС‚РІРѕСЂРёС‚Рё",
+  creating: "РЎС‚РІРѕСЂСЋС”РјРѕ...",
+  loading: "Р—Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ...",
+  emptyHouseholds: "РЈ РІР°СЃ РїРѕРєРё РЅРµРјР°С” РєС–РјРЅР°С‚. РЎС‚РІРѕСЂС–С‚СЊ РїРµСЂС€Сѓ РєС–РјРЅР°С‚Сѓ РІРёС‰Рµ.",
+  emptyMembers: "РЈ С†С–Р№ РєС–РјРЅР°С‚С– РїРѕРєРё РЅРµРјР°С” СѓС‡Р°СЃРЅРёРєС–РІ.",
+  membersTitle: "РЈС‡Р°СЃРЅРёРєРё",
+  role_OWNER: "Р’Р»Р°СЃРЅРёРє",
+  role_ADMIN: "РђРґРјС–РЅС–СЃС‚СЂР°С‚РѕСЂ",
+  role_MEMBER: "РЈС‡Р°СЃРЅРёРє",
+  myRole: "РњРѕСЏ СЂРѕР»СЊ",
+  createError: "РќРµ РІРґР°Р»РѕСЃСЏ СЃС‚РІРѕСЂРёС‚Рё РєС–РјРЅР°С‚Сѓ.",
+  inviteTitle: "РљРѕРґ Р·Р°РїСЂРѕС€РµРЅРЅСЏ",
+  inviteRole: "Р РѕР»СЊ РґР»СЏ РЅРѕРІРѕРіРѕ СѓС‡Р°СЃРЅРёРєР°",
+  generateCode: "Р—РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ",
+  generatingCode: "Р“РµРЅРµСЂСѓС”РјРѕ...",
+  clearCode: "РЎРєР°СЃСѓРІР°С‚Рё РєРѕРґ",
+  clearingCode: "РЎРєР°СЃРѕРІСѓС”РјРѕ...",
+  code: "РљРѕРґ",
+  expiresAt: "Р”С–Р№СЃРЅРёР№ РґРѕ",
+  joinTitle: "РџСЂРёС”РґРЅР°С‚РёСЃСЊ РїРѕ РєРѕРґСѓ",
+  joinCodeLabel: "6-Р·РЅР°С‡РЅРёР№ РєРѕРґ",
   joinCodePlaceholder: "123456",
-  join: "Приєднатись",
-  joining: "Приєднуємось...",
-  joinSuccess: "Успішно приєднано до кімнати.",
-  joinError: "Не вдалося приєднатись по коду.",
-  notifications: "Сповіщення",
-  noNotifications: "Поки що немає сповіщень.",
-  markAllRead: "Позначити всі прочитаними",
-  rename: "Редагувати назву",
-  saveName: "Зберегти назву",
-  cancel: "Скасувати",
-  deleteRoom: "Видалити кімнату",
-  deletingRoom: "Видаляємо...",
-  deleteConfirm: "Видалити кімнату? Учасники отримають сповіщення.",
-  ownerOnly: "Лише власник може редагувати або видаляти кімнату.",
-  renameError: "Не вдалося змінити назву кімнати.",
-  deleteError: "Не вдалося видалити кімнату.",
-  removeMember: "Видалити",
-  leaveRoom: "Вийти",
-  removingMember: "Видаляємо...",
-  removeMemberError: "Не вдалося видалити учасника.",
-  leaveRoomConfirm: "Вийти з кімнати?",
+  join: "РџСЂРёС”РґРЅР°С‚РёСЃСЊ",
+  joining: "РџСЂРёС”РґРЅСѓС”РјРѕСЃСЊ...",
+  joinSuccess: "РЈСЃРїС–С€РЅРѕ РїСЂРёС”РґРЅР°РЅРѕ РґРѕ РєС–РјРЅР°С‚Рё.",
+  joinError: "РќРµ РІРґР°Р»РѕСЃСЏ РїСЂРёС”РґРЅР°С‚РёСЃСЊ РїРѕ РєРѕРґСѓ.",
+  notifications: "РЎРїРѕРІС–С‰РµРЅРЅСЏ",
+  noNotifications: "РџРѕРєРё С‰Рѕ РЅРµРјР°С” СЃРїРѕРІС–С‰РµРЅСЊ.",
+  markAllRead: "РџРѕР·РЅР°С‡РёС‚Рё РІСЃС– РїСЂРѕС‡РёС‚Р°РЅРёРјРё",
+  rename: "Р РµРґР°РіСѓРІР°С‚Рё РЅР°Р·РІСѓ",
+  saveName: "Р—Р±РµСЂРµРіС‚Рё РЅР°Р·РІСѓ",
+  cancel: "РЎРєР°СЃСѓРІР°С‚Рё",
+  deleteRoom: "Р’РёРґР°Р»РёС‚Рё РєС–РјРЅР°С‚Сѓ",
+  deletingRoom: "Р’РёРґР°Р»СЏС”РјРѕ...",
+  deleteConfirm: "Р’РёРґР°Р»РёС‚Рё РєС–РјРЅР°С‚Сѓ? РЈС‡Р°СЃРЅРёРєРё РѕС‚СЂРёРјР°СЋС‚СЊ СЃРїРѕРІС–С‰РµРЅРЅСЏ.",
+  ownerOnly: "Р›РёС€Рµ РІР»Р°СЃРЅРёРє РјРѕР¶Рµ СЂРµРґР°РіСѓРІР°С‚Рё Р°Р±Рѕ РІРёРґР°Р»СЏС‚Рё РєС–РјРЅР°С‚Сѓ.",
+  renameError: "РќРµ РІРґР°Р»РѕСЃСЏ Р·РјС–РЅРёС‚Рё РЅР°Р·РІСѓ РєС–РјРЅР°С‚Рё.",
+  deleteError: "РќРµ РІРґР°Р»РѕСЃСЏ РІРёРґР°Р»РёС‚Рё РєС–РјРЅР°С‚Сѓ.",
+  removeMember: "Р’РёРґР°Р»РёС‚Рё",
+  leaveRoom: "Р’РёР№С‚Рё",
+  removingMember: "Р’РёРґР°Р»СЏС”РјРѕ...",
+  removeMemberError: "РќРµ РІРґР°Р»РѕСЃСЏ РІРёРґР°Р»РёС‚Рё СѓС‡Р°СЃРЅРёРєР°.",
+  leaveRoomConfirm: "Р’РёР№С‚Рё Р· РєС–РјРЅР°С‚Рё?",
 };
 
 const roleLabel = (role: Member["role"] | Household["role"] | JoinRole) => {
@@ -140,7 +140,7 @@ export function HouseholdMembersPanel() {
     setExpandedHouseholdId((prev) => {
       if (list.length === 0) return null;
       if (prev && list.some((item) => item.id === prev)) return prev;
-      return list[0].id;
+      return null;
     });
 
     setRoleByHousehold((prev) => {
@@ -254,15 +254,15 @@ export function HouseholdMembersPanel() {
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: "Не вдалося згенерувати код." }));
-        setError(body.error || "Не вдалося згенерувати код.");
+        const body = await response.json().catch(() => ({ error: "РќРµ РІРґР°Р»РѕСЃСЏ Р·РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ." }));
+        setError(body.error || "РќРµ РІРґР°Р»РѕСЃСЏ Р·РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ.");
         return;
       }
 
       const data = (await response.json()) as JoinCodeState;
       setJoinCodes((prev) => ({ ...prev, [householdId]: data }));
     } catch {
-      setError("Не вдалося згенерувати код.");
+      setError("РќРµ РІРґР°Р»РѕСЃСЏ Р·РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ.");
     } finally {
       setBusyHouseholdId(null);
     }
@@ -278,14 +278,14 @@ export function HouseholdMembersPanel() {
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: "Не вдалося скасувати код." }));
-        setError(body.error || "Не вдалося скасувати код.");
+        const body = await response.json().catch(() => ({ error: "РќРµ РІРґР°Р»РѕСЃСЏ СЃРєР°СЃСѓРІР°С‚Рё РєРѕРґ." }));
+        setError(body.error || "РќРµ РІРґР°Р»РѕСЃСЏ СЃРєР°СЃСѓРІР°С‚Рё РєРѕРґ.");
         return;
       }
 
       setJoinCodes((prev) => ({ ...prev, [householdId]: null }));
     } catch {
-      setError("Не вдалося скасувати код.");
+      setError("РќРµ РІРґР°Р»РѕСЃСЏ СЃРєР°СЃСѓРІР°С‚Рё РєРѕРґ.");
     } finally {
       setBusyHouseholdId(null);
     }
@@ -298,7 +298,7 @@ export function HouseholdMembersPanel() {
     setJoinSuccess("");
 
     if (!/^\d{6}$/.test(joinCodeInput.trim())) {
-      setJoinError("Код має містити 6 цифр.");
+      setJoinError("РљРѕРґ РјР°С” РјС–СЃС‚РёС‚Рё 6 С†РёС„СЂ.");
       return;
     }
 
@@ -427,33 +427,6 @@ export function HouseholdMembersPanel() {
       <p className="section-label">{TXT.section}</p>
 
       <div className="filters-card">
-        <p className="section-label">{TXT.notifications}</p>
-        {notifications.length === 0 ? (
-          <p className="empty-line">{TXT.noNotifications}</p>
-        ) : (
-          <>
-            <div className="invite-actions">
-              <p className="summary-pill">Непрочитані: <strong>{unreadCount}</strong></p>
-              <button className="button button-secondary" type="button" onClick={markAllNotificationsRead}>
-                {TXT.markAllRead}
-              </button>
-            </div>
-            <div className="household-members">
-              {notifications.map((item) => (
-                <div className="household-member-row" key={item.id}>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <p>{item.body}</p>
-                  </div>
-                  <span>{formatStamp(item.createdAt)}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="filters-card">
         <p className="section-label">{TXT.createTitle}</p>
         <form className="expense-form" onSubmit={handleCreateHousehold}>
           <label>
@@ -526,7 +499,7 @@ export function HouseholdMembersPanel() {
                     <strong>{household.name}</strong>
                     <small>{TXT.myRole}: {roleLabel(household.role)}</small>
                   </span>
-                  <span>{expanded ? "−" : "+"}</span>
+                  <span>{expanded ? "в€’" : "+"}</span>
                 </button>
 
                 {expanded ? (
@@ -668,8 +641,7 @@ export function HouseholdMembersPanel() {
                           return (
                             <div className="household-member-row" key={member.id}>
                               <div>
-                                <strong>{member.name?.trim() || member.email}</strong>
-                                <p>{member.email}</p>
+                                <strong>{member.name?.trim() || "РќРµРІС–РґРѕРјРёР№ РєРѕСЂРёСЃС‚СѓРІР°С‡"}</strong>
                               </div>
                               <div className="member-row-actions">
                                 <span>{roleLabel(member.role)}</span>
@@ -699,3 +671,4 @@ export function HouseholdMembersPanel() {
     </article>
   );
 }
+
