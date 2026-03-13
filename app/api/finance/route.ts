@@ -248,6 +248,7 @@ export async function GET(request: Request) {
         date: formatDateIso(item.date),
         createdById: item.createdById,
         createdByName: item.createdBy.name || item.createdBy.email || undefined,
+        mirrorKey: item.mirrorKey,
       })),
       incomes: incomes.map((item) => ({
         id: item.id,
@@ -258,15 +259,17 @@ export async function GET(request: Request) {
         date: formatDateIso(item.date),
         createdById: item.createdById,
         createdByName: item.createdBy.name || item.createdBy.email || undefined,
+        mirrorKey: item.mirrorKey,
       })),
       currencyIncomes: currencyIncomes.map((item) => ({
         id: item.id,
-        name: item.currency,
+        name: item.title || item.currency,
         currency: item.currency,
         amount: item.amount,
         date: formatDateIso(item.date),
         createdById: item.createdById,
         createdByName: item.createdBy.name || item.createdBy.email || undefined,
+        mirrorKey: item.mirrorKey,
       })),
       limits: limits.map((item) => ({
         category: item.category,
@@ -294,9 +297,11 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => ({}));
     const scopeKey = String(body.scopeKey ?? "personal");
     const kind = String(body.kind ?? "");
+    const duplicateToPersonal = Boolean(body.duplicateToPersonal);
 
     const scope = await resolveScopeHouseholdId(resolved.userId, scopeKey);
     if ("error" in scope) return scope.error;
+    const isRoomScope = scopeKey.startsWith("room:");
 
     if (kind === "expense") {
       const name = String(body.name ?? "").trim();
@@ -309,6 +314,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid expense payload." }, { status: 400 });
       }
 
+      const shouldDuplicateToPersonal = isRoomScope && duplicateToPersonal;
+      const mirrorKey = shouldDuplicateToPersonal ? crypto.randomUUID() : null;
+
       const created = await prisma.expense.create({
         data: {
           title: name,
@@ -318,12 +326,29 @@ export async function POST(request: Request) {
           date: new Date(date),
           householdId: scope.householdId,
           createdById: resolved.userId,
+          mirrorKey,
         },
         include: { createdBy: { select: { name: true, email: true } } },
       });
 
+      if (shouldDuplicateToPersonal) {
+        const personalHouseholdId = await ensurePersonalHousehold(resolved.userId);
+        await prisma.expense.create({
+          data: {
+            title: name,
+            category,
+            source: expenseSourceToDb(source),
+            amount: Math.round(amount),
+            date: new Date(date),
+            householdId: personalHouseholdId,
+            createdById: resolved.userId,
+            mirrorKey,
+          },
+        });
+      }
+
       const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
-      if (scopeKey.startsWith("room:")) {
+      if (isRoomScope) {
         await notifyHouseholdMembers({
           householdId: scope.householdId,
           actorUserId: resolved.userId,
@@ -360,6 +385,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid income payload." }, { status: 400 });
       }
 
+      const shouldDuplicateToPersonal = isRoomScope && duplicateToPersonal;
+      const mirrorKey = shouldDuplicateToPersonal ? crypto.randomUUID() : null;
+
       const created = await prisma.income.create({
         data: {
           title: name,
@@ -369,11 +397,28 @@ export async function POST(request: Request) {
           date: new Date(date),
           householdId: scope.householdId,
           createdById: resolved.userId,
+          mirrorKey,
         },
         include: { createdBy: { select: { name: true, email: true } } },
       });
 
-      if (scopeKey.startsWith("room:")) {
+      if (shouldDuplicateToPersonal) {
+        const personalHouseholdId = await ensurePersonalHousehold(resolved.userId);
+        await prisma.income.create({
+          data: {
+            title: name,
+            type: incomeTypeToDb(type),
+            category: incomeCategoryToDb(category),
+            amount: Math.round(amount),
+            date: new Date(date),
+            householdId: personalHouseholdId,
+            createdById: resolved.userId,
+            mirrorKey,
+          },
+        });
+      }
+
+      if (isRoomScope) {
         const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
         await notifyHouseholdMembers({
           householdId: scope.householdId,
@@ -411,6 +456,9 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Invalid currency income payload." }, { status: 400 });
       }
 
+      const shouldDuplicateToPersonal = isRoomScope && duplicateToPersonal;
+      const mirrorKey = shouldDuplicateToPersonal ? crypto.randomUUID() : null;
+
       let signedAmount = amount;
       if (kind === "currency_expense") {
         const summary = await prisma.currencyIncome.aggregate({
@@ -426,16 +474,33 @@ export async function POST(request: Request) {
 
       const created = await prisma.currencyIncome.create({
         data: {
+          title: name,
           currency,
           amount: signedAmount,
           date: new Date(date),
           householdId: scope.householdId,
           createdById: resolved.userId,
+          mirrorKey,
         },
         include: { createdBy: { select: { name: true, email: true } } },
       });
 
-      if (scopeKey.startsWith("room:")) {
+      if (shouldDuplicateToPersonal) {
+        const personalHouseholdId = await ensurePersonalHousehold(resolved.userId);
+        await prisma.currencyIncome.create({
+          data: {
+            title: name,
+            currency,
+            amount: signedAmount,
+            date: new Date(date),
+            householdId: personalHouseholdId,
+            createdById: resolved.userId,
+            mirrorKey,
+          },
+        });
+      }
+
+      if (isRoomScope) {
         const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
         const isExpense = kind === "currency_expense";
         const operationLabel = isExpense ? "Списання валюти" : "Надходження валюти";
@@ -488,6 +553,7 @@ export async function PATCH(request: Request) {
 
     const scope = await resolveScopeHouseholdId(resolved.userId, scopeKey);
     if ("error" in scope) return scope.error;
+    const isRoomScope = scopeKey.startsWith("room:");
 
     if (kind === "expense") {
       const id = String(body.id ?? "").trim();
@@ -499,6 +565,23 @@ export async function PATCH(request: Request) {
 
       if (!id || !name || !date || !Number.isFinite(amount) || amount <= 0) {
         return NextResponse.json({ error: "Invalid expense payload." }, { status: 400 });
+      }
+
+      const existingExpense = await prisma.expense.findFirst({
+        where: {
+          id,
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+        select: { mirrorKey: true },
+      });
+
+      if (!existingExpense) {
+        return NextResponse.json({ error: "Only the author can edit this record." }, { status: 403 });
+      }
+
+      if (existingExpense.mirrorKey && !isRoomScope) {
+        return NextResponse.json({ error: "Synchronized records can only be edited from room scope." }, { status: 403 });
       }
 
       const updated = await prisma.expense.updateMany({
@@ -529,6 +612,23 @@ export async function PATCH(request: Request) {
         return NextResponse.json({ error: "Record not found." }, { status: 404 });
       }
 
+      if (item.mirrorKey) {
+        await prisma.expense.updateMany({
+          where: {
+            mirrorKey: item.mirrorKey,
+            createdById: resolved.userId,
+            id: { not: item.id },
+          },
+          data: {
+            title: name,
+            category,
+            source: expenseSourceToDb(source),
+            amount: Math.round(amount),
+            date: new Date(date),
+          },
+        });
+      }
+
       return NextResponse.json({
         item: {
           id: item.id,
@@ -553,6 +653,23 @@ export async function PATCH(request: Request) {
 
       if (!id || !name || !date || !Number.isFinite(amount) || amount <= 0) {
         return NextResponse.json({ error: "Invalid income payload." }, { status: 400 });
+      }
+
+      const existingIncome = await prisma.income.findFirst({
+        where: {
+          id,
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+        select: { mirrorKey: true },
+      });
+
+      if (!existingIncome) {
+        return NextResponse.json({ error: "Only the author can edit this record." }, { status: 403 });
+      }
+
+      if (existingIncome.mirrorKey && !isRoomScope) {
+        return NextResponse.json({ error: "Synchronized records can only be edited from room scope." }, { status: 403 });
       }
 
       const updated = await prisma.income.updateMany({
@@ -581,6 +698,23 @@ export async function PATCH(request: Request) {
 
       if (!item) {
         return NextResponse.json({ error: "Record not found." }, { status: 404 });
+      }
+
+      if (item.mirrorKey) {
+        await prisma.income.updateMany({
+          where: {
+            mirrorKey: item.mirrorKey,
+            createdById: resolved.userId,
+            id: { not: item.id },
+          },
+          data: {
+            title: name,
+            type: incomeTypeToDb(type),
+            category: incomeCategoryToDb(category),
+            amount: Math.round(amount),
+            date: new Date(date),
+          },
+        });
       }
 
       return NextResponse.json({
@@ -615,11 +749,15 @@ export async function PATCH(request: Request) {
           householdId: scope.householdId,
           createdById: resolved.userId,
         },
-        select: { id: true, amount: true, currency: true },
+        select: { id: true, amount: true, currency: true, mirrorKey: true },
       });
 
       if (!existing) {
         return NextResponse.json({ error: "Only the author can edit this record." }, { status: 403 });
+      }
+
+      if (existing.mirrorKey && !isRoomScope) {
+        return NextResponse.json({ error: "Synchronized records can only be edited from room scope." }, { status: 403 });
       }
 
       let signedAmount = amount;
@@ -640,6 +778,7 @@ export async function PATCH(request: Request) {
       await prisma.currencyIncome.update({
         where: { id },
         data: {
+          title: name,
           currency,
           amount: signedAmount,
           date: new Date(date),
@@ -653,6 +792,22 @@ export async function PATCH(request: Request) {
 
       if (!item) {
         return NextResponse.json({ error: "Record not found." }, { status: 404 });
+      }
+
+      if (item.mirrorKey) {
+        await prisma.currencyIncome.updateMany({
+          where: {
+            mirrorKey: item.mirrorKey,
+            createdById: resolved.userId,
+            id: { not: item.id },
+          },
+          data: {
+            title: name,
+            currency,
+            amount: signedAmount,
+            date: new Date(date),
+          },
+        });
       }
 
       return NextResponse.json({
@@ -721,37 +876,71 @@ export async function DELETE(request: Request) {
     if ("error" in scope) return scope.error;
 
     const onlyAuthorFilter = scope.isOwner ? {} : { createdById: resolved.userId };
+    const isRoomScope = scopeKey.startsWith("room:");
 
     if (kind === "expense") {
-      const deleted = await prisma.expense.deleteMany({
+      const item = await prisma.expense.findFirst({
         where: { id, householdId: scope.householdId, ...onlyAuthorFilter },
+        select: { id: true, mirrorKey: true },
       });
 
-      if (deleted.count === 0) {
-        return NextResponse.json({ error: "Лише автор або власник кімнати може видаляти запис." }, { status: 403 });
+      if (!item) {
+        return NextResponse.json({ error: "???????? ?????????? ?????? ?????????????? ?????????????? ???????? ???????????????? ??????????." }, { status: 403 });
+      }
+
+      if (item.mirrorKey && !isRoomScope) {
+        return NextResponse.json({ error: "??????????? ????? ????? ???????? ???? ? ???????." }, { status: 403 });
+      }
+
+      if (item.mirrorKey) {
+        await prisma.expense.deleteMany({ where: { mirrorKey: item.mirrorKey } });
+      } else {
+        await prisma.expense.delete({ where: { id: item.id } });
       }
 
       return NextResponse.json({ ok: true });
     }
 
     if (kind === "currency_income" || kind === "currency_expense") {
-      const deleted = await prisma.currencyIncome.deleteMany({
+      const item = await prisma.currencyIncome.findFirst({
         where: { id, householdId: scope.householdId, ...onlyAuthorFilter },
+        select: { id: true, mirrorKey: true },
       });
 
-      if (deleted.count === 0) {
-        return NextResponse.json({ error: "Лише автор або власник кімнати може видаляти запис." }, { status: 403 });
+      if (!item) {
+        return NextResponse.json({ error: "???????? ?????????? ?????? ?????????????? ?????????????? ???????? ???????????????? ??????????." }, { status: 403 });
+      }
+
+      if (item.mirrorKey && !isRoomScope) {
+        return NextResponse.json({ error: "??????????? ????? ????? ???????? ???? ? ???????." }, { status: 403 });
+      }
+
+      if (item.mirrorKey) {
+        await prisma.currencyIncome.deleteMany({ where: { mirrorKey: item.mirrorKey } });
+      } else {
+        await prisma.currencyIncome.delete({ where: { id: item.id } });
       }
 
       return NextResponse.json({ ok: true });
     }
 
-    const deleted = await prisma.income.deleteMany({
+    const item = await prisma.income.findFirst({
       where: { id, householdId: scope.householdId, ...onlyAuthorFilter },
+      select: { id: true, mirrorKey: true },
     });
 
-    if (deleted.count === 0) {
-      return NextResponse.json({ error: "Лише автор або власник кімнати може видаляти запис." }, { status: 403 });
+    if (!item) {
+      return NextResponse.json({ error: "???????? ?????????? ?????? ?????????????? ?????????????? ???????? ???????????????? ??????????." }, { status: 403 });
+    }
+
+    if (item.mirrorKey && !isRoomScope) {
+      return NextResponse.json({ error: "??????????? ????? ????? ???????? ???? ? ???????." }, { status: 403 });
+    }
+
+    if (item.mirrorKey) {
+      await prisma.income.deleteMany({ where: { mirrorKey: item.mirrorKey } });
+    } else {
+      await prisma.income.delete({ where: { id: item.id } });
     }
 
     return NextResponse.json({ ok: true });

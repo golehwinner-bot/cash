@@ -1,4 +1,4 @@
-﻿@import "./theme.css";
+@import "./theme.css";
 
 * {
   box-sizing: border-box;
@@ -1839,34 +1839,12 @@ body[data-theme="light"] .flash-error {
   font-weight: 600;
 }
 
+.settings-actions .push-toggle {
+  grid-column: 1 / -1;
+}
 
 .push-toggle {
-  min-height: 36px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 6px 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text);
-  background: rgba(15, 23, 42, 0.72);
-}
-
-.push-toggle input {
-  width: 16px;
-  height: 16px;
-  accent-color: #22c55e;
-}
-
-.push-toggle span {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-body[data-theme="light"] .push-toggle {
-  background: rgba(255, 255, 255, 0.96);
-  border-color: #cbd5e1;
-  color: #0f172a;
+  width: 100%;
 }
 
 .room-accordion-list {
@@ -2042,3 +2020,86 @@ body[data-theme="light"] .push-toggle {
   color: var(--muted);
 }
 
+.form-toggle-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
+
+.ui-switch {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  color: var(--text);
+}
+
+.ui-switch span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.ui-switch input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 38px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(100, 116, 139, 0.45);
+  background: rgba(15, 23, 42, 0.65);
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.ui-switch input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(226, 232, 240, 0.95);
+  transition: transform 0.18s ease;
+}
+
+.ui-switch input:checked {
+  border-color: rgba(34, 197, 94, 0.58);
+  background: linear-gradient(130deg, #16a34a 0%, #4ade80 100%);
+}
+
+.ui-switch input:checked::after {
+  transform: translateX(16px);
+}
+
+.ui-switch input:focus-visible {
+  outline: 2px solid rgba(74, 222, 128, 0.55);
+  outline-offset: 2px;
+}
+
+.ui-switch input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.ui-switch-compact span {
+  font-size: 12px;
+}
+
+body[data-theme="light"] .ui-switch input {
+  background: rgba(203, 213, 225, 0.6);
+  border-color: rgba(148, 163, 184, 0.5);
+}
+
+@media (max-width: 560px) {
+  .ui-switch span {
+    font-size: 12px;
+  }
+
+  .ui-switch-compact span {
+    font-size: 11px;
+  }
+}

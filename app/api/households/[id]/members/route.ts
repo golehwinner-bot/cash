@@ -42,6 +42,64 @@ const notifyRoomMembers = async (params: {
   );
 };
 
+const cleanupPersonalMirrorsOnRoomLeave = async (householdId: string, targetUserId: string) => {
+  const personal = await prisma.household.findUnique({
+    where: { personalOwnerId: targetUserId },
+    select: { id: true },
+  });
+
+  if (!personal) return;
+
+  const [expenseRows, incomeRows, currencyRows] = await prisma.$transaction([
+    prisma.expense.findMany({
+      where: { householdId, createdById: targetUserId, mirrorKey: { not: null } },
+      select: { mirrorKey: true },
+    }),
+    prisma.income.findMany({
+      where: { householdId, createdById: targetUserId, mirrorKey: { not: null } },
+      select: { mirrorKey: true },
+    }),
+    prisma.currencyIncome.findMany({
+      where: { householdId, createdById: targetUserId, mirrorKey: { not: null } },
+      select: { mirrorKey: true },
+    }),
+  ]);
+
+  const expenseMirrorKeys = [...new Set(expenseRows.map((row) => row.mirrorKey).filter(Boolean) as string[])];
+  const incomeMirrorKeys = [...new Set(incomeRows.map((row) => row.mirrorKey).filter(Boolean) as string[])];
+  const currencyMirrorKeys = [...new Set(currencyRows.map((row) => row.mirrorKey).filter(Boolean) as string[])];
+
+  if (expenseMirrorKeys.length > 0) {
+    await prisma.expense.deleteMany({
+      where: {
+        householdId: personal.id,
+        createdById: targetUserId,
+        mirrorKey: { in: expenseMirrorKeys },
+      },
+    });
+  }
+
+  if (incomeMirrorKeys.length > 0) {
+    await prisma.income.deleteMany({
+      where: {
+        householdId: personal.id,
+        createdById: targetUserId,
+        mirrorKey: { in: incomeMirrorKeys },
+      },
+    });
+  }
+
+  if (currencyMirrorKeys.length > 0) {
+    await prisma.currencyIncome.deleteMany({
+      where: {
+        householdId: personal.id,
+        createdById: targetUserId,
+        mirrorKey: { in: currencyMirrorKeys },
+      },
+    });
+  }
+};
+
 export async function GET(_request: Request, context: Params) {
   const session = await auth();
   if (!session?.user?.id) {
@@ -186,6 +244,7 @@ export async function DELETE(request: Request, context: Params) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  await cleanupPersonalMirrorsOnRoomLeave(householdId, target.user.id);
   await prisma.householdMember.delete({ where: { id: target.id } });
 
   const actorName = session.user.name || session.user.email || "Невідомий користувач";

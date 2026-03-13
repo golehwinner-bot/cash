@@ -104,6 +104,7 @@ model Expense {
   id          String        @id @default(cuid())
   title       String
   amount      Int
+  mirrorKey   String?
   category    String
   source      ExpenseSource @default(CARD)
   date        DateTime
@@ -121,6 +122,7 @@ model Income {
   id          String         @id @default(cuid())
   title       String
   amount      Int
+  mirrorKey   String?
   type        IncomeType
   category    IncomeCategory
   date        DateTime
@@ -140,6 +142,7 @@ model CurrencyIncome {
   title       String    @default("")
   currency    String
   amount      Float
+  mirrorKey   String?
   date        DateTime
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

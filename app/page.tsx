@@ -3,9 +3,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
 import { HouseholdMembersPanel } from "./components/household-members-panel";
+
+
 import {
+  ArrowDownRight,
+  ArrowUpRight,
   Bell,
   CheckCheck,
+  ChevronDown,
+  ChevronUp,
   Bus,
   Car,
   CircleHelp,
@@ -26,6 +32,7 @@ import {
   Sun,
   UserCircle2,
   Wallet,
+  X,
   type LucideIcon,
 } from "lucide-react";
 
@@ -61,6 +68,7 @@ type Expense = {
   date: string;
   createdById?: string;
   createdByName?: string;
+  mirrorKey?: string | null;
 };
 
 type Income = {
@@ -72,6 +80,7 @@ type Income = {
   date: string;
   createdById?: string;
   createdByName?: string;
+  mirrorKey?: string | null;
 };
 
 type CurrencyIncome = {
@@ -82,6 +91,7 @@ type CurrencyIncome = {
   date: string;
   createdById?: string;
   createdByName?: string;
+  mirrorKey?: string | null;
 };
 type ExpenseForm = {
   name: string;
@@ -208,6 +218,7 @@ const TXT = {
   darkTheme: "\u0422\u0435\u043c\u043d\u0430",
   lightTheme: "\u0421\u0432\u0456\u0442\u043b\u0430",
   defaultScope: "\u041a\u043e\u043d\u0442\u0435\u043a\u0441\u0442 \u0437\u0430 \u043c\u043e\u0432\u0447\u0430\u043d\u043d\u044f\u043c",
+  duplicateToPersonal: "\u041e\u0441\u043e\u0431\u0438\u0441\u0442\u0438\u0439 \u043e\u0431\u043b\u0456\u043a",
   account: "\u0410\u043a\u0430\u0443\u043d\u0442",
   signOut: "\u0412\u0438\u0439\u0442\u0438",
   notifications: "\u0421\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f",
@@ -225,6 +236,9 @@ const TXT = {
   pushNotSupported: "\u0426\u0435\u0439 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043d\u0435 \u043f\u0456\u0434\u0442\u0440\u0438\u043c\u0443\u0454 push.",
   pushPermissionDenied: "\u0414\u043e\u0437\u0432\u0456\u043b \u043d\u0430 \u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f \u0432\u0456\u0434\u0445\u0438\u043b\u0435\u043d\u043e.",
   loading: "\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f...",
+  close: "\u0417\u0430\u043a\u0440\u0438\u0442\u0438",
+  deleteFromRoomOnly: "\u0414\u0443\u0431\u043b\u044c\u043e\u0432\u0430\u043d\u0438\u0439 \u0437\u0430\u043f\u0438\u0441 \u043c\u043e\u0436\u043d\u0430 \u0432\u0438\u0434\u0430\u043b\u0438\u0442\u0438 \u043b\u0438\u0448\u0435 \u0437 \u043a\u0456\u043c\u043d\u0430\u0442\u0438.",
+  editFromRoomOnly: "\u0421\u0438\u043d\u0445\u0440\u043e\u043d\u0456\u0437\u043e\u0432\u0430\u043d\u0438\u0439 \u0437\u0430\u043f\u0438\u0441 \u043c\u043e\u0436\u043d\u0430 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043b\u0438\u0448\u0435 \u0437 \u043a\u0456\u043c\u043d\u0430\u0442\u0438.",
 };
 
 const categories: Array<{ id: CategoryId; label: string }> = [
@@ -393,6 +407,9 @@ export default function Home() {
   const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
   const [isAddingExpense, setIsAddingExpense] = useState(false);
+  const [duplicateExpenseToPersonal, setDuplicateExpenseToPersonal] = useState(false);
+  const [duplicateIncomeToPersonal, setDuplicateIncomeToPersonal] = useState(false);
+  const [duplicateCurrencyToPersonal, setDuplicateCurrencyToPersonal] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
   const [editingCurrencyIncomeId, setEditingCurrencyIncomeId] = useState<string | null>(null);
@@ -412,6 +429,7 @@ export default function Home() {
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
   const currentUserId = session?.user?.id || "";
   const unreadNotificationsCount = notifications.filter((item) => !item.readAt).length;
+  const canDuplicateToPersonal = activeScopeKey.startsWith("room:");
 
   const scopeOptions = useMemo(
     () => [
@@ -434,10 +452,14 @@ export default function Home() {
     return room?.role === "OWNER";
   }, [activeScopeKey, households]);
 
-  const canDeleteRecord = (createdById?: string) => {
+  const canDeleteRecord = (createdById?: string, mirrorKey?: string | null) => {
+    if (mirrorKey && !activeScopeKey.startsWith("room:")) return false;
     if (isActiveScopeOwner) return true;
     return Boolean(createdById && createdById === currentUserId);
   };
+
+  const canEditRecord = (createdById?: string, mirrorKey?: string | null) =>
+    Boolean(createdById && createdById === currentUserId) && (!mirrorKey || activeScopeKey.startsWith("room:"));
 
   const loadNotifications = async () => {
     setNotificationsLoading(true);
@@ -711,7 +733,6 @@ export default function Home() {
     const loadFinance = async () => {
       const response = await fetch(`/api/finance?scopeKey=${encodeURIComponent(activeScopeKey)}`, { cache: "no-store" });
       if (!response.ok) return;
-
       const data = (await response.json()) as FinancePayload;
       const nextExpenses = Array.isArray(data.expenses)
         ? data.expenses.map((item) => ({
@@ -864,15 +885,16 @@ export default function Home() {
           source: expenseForm.source,
           amount: amountValue,
           date: expenseForm.date,
+          duplicateToPersonal: canDuplicateToPersonal && duplicateExpenseToPersonal,
         }),
       });
 
       if (!response.ok) return;
-
       const data = (await response.json()) as { item?: Expense };
       if (data.item) {
         setExpenses((prev) => [data.item as Expense, ...prev]);
         setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
+        setDuplicateExpenseToPersonal(false);
         setIsExpenseModalOpen(false);
         setFlashMessage({ type: "success", text: TXT.expenseSaved });
       }
@@ -898,21 +920,22 @@ export default function Home() {
         category: incomeForm.category,
         amount: amountValue,
         date: incomeForm.date,
+        duplicateToPersonal: canDuplicateToPersonal && duplicateIncomeToPersonal,
       }),
     });
 
     if (!response.ok) return;
-
     const data = (await response.json()) as { item?: Income };
     if (data.item) {
       setIncomes((prev) => [data.item as Income, ...prev]);
       setIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setDuplicateIncomeToPersonal(false);
       setFlashMessage({ type: "success", text: TXT.incomeSaved });
     }
   };
 
   const openExpenseEditModal = (expense: Expense) => {
-    if (!currentUserId || expense.createdById !== currentUserId) return;
+    if (!canEditRecord(expense.createdById, expense.mirrorKey)) return;
     setEditingExpenseId(expense.id);
     setEditExpenseForm({
       name: expense.name,
@@ -924,7 +947,7 @@ export default function Home() {
   };
 
   const openIncomeEditModal = (income: Income) => {
-    if (!currentUserId || income.createdById !== currentUserId) return;
+    if (!canEditRecord(income.createdById, income.mirrorKey)) return;
     setEditingIncomeId(income.id);
     setEditIncomeForm({
       name: income.name,
@@ -958,7 +981,6 @@ export default function Home() {
     });
 
     if (!response.ok) return;
-
     const data = (await response.json()) as { item?: Expense };
     if (data.item) {
       setExpenses((prev) => prev.map((expense) => (expense.id === data.item?.id ? (data.item as Expense) : expense)));
@@ -990,7 +1012,6 @@ export default function Home() {
     });
 
     if (!response.ok) return;
-
     const data = (await response.json()) as { item?: Income };
     if (data.item) {
       setIncomes((prev) => prev.map((income) => (income.id === data.item?.id ? (data.item as Income) : income)));
@@ -1001,7 +1022,7 @@ export default function Home() {
 
 
   const openCurrencyIncomeEditModal = (item: CurrencyIncome) => {
-    if (!currentUserId || item.createdById !== currentUserId) return;
+    if (!canEditRecord(item.createdById, item.mirrorKey)) return;
     setEditingCurrencyIncomeId(item.id);
     setEditingCurrencyMode(item.amount < 0 ? "expense" : "income");
     setEditCurrencyIncomeForm({
@@ -1054,7 +1075,11 @@ export default function Home() {
     const response = await fetch(`/api/finance?kind=currency_income&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      setFlashMessage({ type: "error", text: payload.error || TXT.deleteFromRoomOnly });
+      return;
+    }
     setCurrencyIncomes((prev) => prev.filter((item) => item.id !== id));
     setFlashMessage({ type: "success", text: TXT.currencyDeleted });
   };
@@ -1073,15 +1098,16 @@ export default function Home() {
         currency: currencyIncomeForm.currency,
         amount: amountValue,
         date: currencyIncomeForm.date,
+        duplicateToPersonal: canDuplicateToPersonal && duplicateCurrencyToPersonal,
       }),
     });
 
     if (!response.ok) return;
-
     const data = (await response.json()) as { item?: CurrencyIncome };
     if (data.item) {
       setCurrencyIncomes((prev) => [data.item as CurrencyIncome, ...prev]);
       setCurrencyIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setDuplicateCurrencyToPersonal(false);
       setIsCurrencyIncomeModalOpen(false);
       setFlashMessage({ type: "success", text: TXT.currencyIncomeSaved });
     }
@@ -1102,6 +1128,7 @@ export default function Home() {
         currency: currencyIncomeForm.currency,
         amount: amountValue,
         date: currencyIncomeForm.date,
+        duplicateToPersonal: canDuplicateToPersonal && duplicateCurrencyToPersonal,
       }),
     });
 
@@ -1118,6 +1145,7 @@ export default function Home() {
     if (data.item) {
       setCurrencyIncomes((prev) => [data.item as CurrencyIncome, ...prev]);
       setCurrencyIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setDuplicateCurrencyToPersonal(false);
       setIsCurrencyIncomeModalOpen(false);
       setFlashMessage({ type: "success", text: TXT.currencyExpenseSaved });
     }
@@ -1126,7 +1154,11 @@ export default function Home() {
     const response = await fetch(`/api/finance?kind=expense&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      setFlashMessage({ type: "error", text: payload.error || TXT.deleteFromRoomOnly });
+      return;
+    }
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
     setFlashMessage({ type: "success", text: TXT.expenseDeleted });
   };
@@ -1135,7 +1167,11 @@ export default function Home() {
     const response = await fetch(`/api/finance?kind=income&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
       method: "DELETE",
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      setFlashMessage({ type: "error", text: payload.error || TXT.deleteFromRoomOnly });
+      return;
+    }
     setIncomes((prev) => prev.filter((income) => income.id !== id));
     setFlashMessage({ type: "success", text: TXT.incomeDeleted });
   };
@@ -1211,8 +1247,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Сповіщення",
-          body: "Тестове push-сповіщення увімкнено.",
+          title: "РЎРїРѕРІС–С‰РµРЅРЅСЏ",
+          body: "РўРµСЃС‚РѕРІРµ push-СЃРїРѕРІС–С‰РµРЅРЅСЏ СѓРІС–РјРєРЅРµРЅРѕ.",
           url: "/",
         }),
       }).catch(() => undefined);
@@ -1390,9 +1426,11 @@ export default function Home() {
                   <div className="settings-group">
                     <p className="settings-label">{TXT.pushTitle}</p>
                     <div className="settings-actions">
-                      <label className="push-toggle">
+                      <label className="push-toggle ui-switch ui-switch-compact">
+                        <span>{pushEnabled ? TXT.pushStateOn : TXT.pushStateOff}</span>
                         <input
                           type="checkbox"
+                          role="switch"
                           checked={pushEnabled}
                           disabled={pushBusy || !pushSupported}
                           onChange={(event) => {
@@ -1403,7 +1441,6 @@ export default function Home() {
                             void disablePushNotifications();
                           }}
                         />
-                        <span>{pushEnabled ? TXT.pushStateOn : TXT.pushStateOff}</span>
                       </label>
                     </div>
                     {!pushSupported ? <p className="settings-label">{TXT.pushNotSupported}</p> : null}
@@ -1430,8 +1467,8 @@ export default function Home() {
             <div className="balance-grid">
               <div className="balance-item balance-hero">
                 <strong className={`balance-hero-amount ${balanceAmountSizeClass}`}>{totalBalanceText}</strong>
-                <p className="balance-hero-meta"><span className="balance-hero-meta-strong"><span className="balance-hero-arrow">↗</span> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p>
-                <p className="balance-hero-meta balance-hero-meta-expense"><span className="balance-hero-meta-strong-expense"><span className="balance-hero-arrow-down">↘</span> -{formatCurrency(totalSpentCurrentMonth)}</span> {TXT.expensesThisMonth}</p>
+                <p className="balance-hero-meta"><span className="balance-hero-meta-strong"><ArrowUpRight size={16} className="balance-hero-arrow" /> +{formatCurrency(totalIncomeCurrentMonth)}</span> {TXT.incomeThisMonth}</p>
+                <p className="balance-hero-meta balance-hero-meta-expense"><span className="balance-hero-meta-strong-expense"><ArrowDownRight size={16} className="balance-hero-arrow-down" /> -{formatCurrency(totalSpentCurrentMonth)}</span> {TXT.expensesThisMonth}</p>
               </div>
               <div className="balance-item"><span className="balance-item-label"><Wallet size={16} /> {TXT.cashBalance}</span><strong>{formatCurrency(cashBalance)}</strong></div>
               <div className="balance-item"><span className="balance-item-label"><CreditCard size={16} /> {TXT.cardBalance}</span><strong>{formatCurrency(cardBalance)}</strong></div>
@@ -1441,7 +1478,7 @@ export default function Home() {
           <article className="card currency-card">
             <button className="accordion-toggle" type="button" onClick={() => setCurrencyAccordionOpen((prev) => !prev)}>
               <span>{TXT.currencyBalance}</span>
-              <span>{currencyAccordionOpen ? "−" : "+"}</span>
+              <span>{currencyAccordionOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}</span>
             </button>
             {currencyAccordionOpen ? (
               <div className="accordion-content">
@@ -1471,7 +1508,7 @@ export default function Home() {
               <div className="expense-table expense-table-scroll">
                 {filteredExpenses.map((expense) => (
                   <div className="expense-row" key={expense.id}>
-                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><div className="entry-actions">{expense.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openExpenseEditModal(expense)}>{TXT.edit}</button> : null}{canDeleteRecord(expense.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button> : null}</div></div>
+                    <div className="entry-top"><strong className={`entry-title ${expense.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{expense.name}</span></strong><span className="entry-date">{mounted ? formatDate(expense.date) : expense.date}</span></div><p className="entry-meta">{categoryLabelMap[expense.category]} | {TXT.expenseSource}: {expense.source === "cash" ? "\u0413\u043e\u0442\u0456\u0432\u043a\u0430" : "\u041a\u0430\u0440\u0442\u043a\u0430"} | {TXT.author}: {expense.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount">-{formatCurrency(expense.amount)}</strong><div className="entry-actions">{canEditRecord(expense.createdById, expense.mirrorKey) ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openExpenseEditModal(expense)}>{TXT.edit}</button> : null}{canDeleteRecord(expense.createdById, expense.mirrorKey) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteExpense(expense.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>
@@ -1524,7 +1561,7 @@ export default function Home() {
               <label>{TXT.incomeCategory}<select value={incomeForm.category} onChange={(event) => setIncomeForm((prev) => ({ ...prev, category: event.target.value as IncomeCategoryId }))}>{incomeCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
               <label>{TXT.amount}<input type="number" min="1" step="1" placeholder="0" value={incomeForm.amount} onChange={(event) => setIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
               <label>{TXT.date}<input type="date" value={incomeForm.date} onChange={(event) => setIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
-              <button className="button button-primary" type="submit">{TXT.save}</button>
+              {canDuplicateToPersonal ? <label className="form-toggle-row ui-switch ui-switch-compact"><span>{TXT.duplicateToPersonal}</span><input type="checkbox" role="switch" checked={duplicateIncomeToPersonal} onChange={(event) => setDuplicateIncomeToPersonal(event.target.checked)} /></label> : null}<button className="button button-primary" type="submit">{TXT.save}</button>
             </form>
           </article>
 
@@ -1535,7 +1572,7 @@ export default function Home() {
               <div className="income-table expense-table-scroll">
                 {incomes.map((income) => (
                   <div className="income-row" key={income.id}>
-                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><div className="entry-actions">{income.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openIncomeEditModal(income)}>{TXT.edit}</button> : null}{canDeleteRecord(income.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button> : null}</div></div>
+                    <div className="entry-top"><strong className={`entry-title ${income.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{income.name}</span></strong><span className="entry-date">{mounted ? formatDate(income.date) : income.date}</span></div><p className="entry-meta">{incomeTypeLabelMap[income.type]} | {incomeCategoryLabelMap[income.category]} | {TXT.author}: {income.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatCurrency(income.amount)}</strong><div className="entry-actions">{canEditRecord(income.createdById, income.mirrorKey) ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openIncomeEditModal(income)}>{TXT.edit}</button> : null}{canDeleteRecord(income.createdById, income.mirrorKey) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteIncome(income.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>
@@ -1549,7 +1586,7 @@ export default function Home() {
               <div className="income-table expense-table-scroll">
                 {currencyIncomes.map((item) => (
                   <div className="income-row" key={item.id}>
-                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{canDeleteRecord(item.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
+                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{canEditRecord(item.createdById, item.mirrorKey) ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{canDeleteRecord(item.createdById, item.mirrorKey) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
                   </div>
                 ))}
               </div>
@@ -1568,7 +1605,7 @@ export default function Home() {
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.addExpense} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h2>{TXT.addExpense}</h2>
-              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setIsExpenseModalOpen(false)}>×</button>
+              <button className="modal-close" type="button" aria-label={TXT.close} onClick={() => setIsExpenseModalOpen(false)}><X size={18} /></button>
             </div>
             <form className="expense-form" onSubmit={handleAddExpense}>
               <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={expenseForm.name} onChange={(event) => setExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
@@ -1576,7 +1613,7 @@ export default function Home() {
               <label>{TXT.expenseSource}<select value={expenseForm.source} onChange={(event) => setExpenseForm((prev) => ({ ...prev, source: event.target.value as ExpenseSourceId }))}>{expenseSources.map((source) => <option key={source.id} value={source.id}>{source.label}</option>)}</select></label>
               <label>{TXT.amount}<input ref={expenseAmountRef} type="number" min="1" step="1" placeholder="0" value={expenseForm.amount} onChange={(event) => setExpenseForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
               <label>{TXT.date}<input type="date" value={expenseForm.date} onChange={(event) => setExpenseForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
-              <button className="button button-primary" type="submit" disabled={isAddingExpense}>{isAddingExpense ? "Зберігаємо..." : TXT.save}</button>
+              {canDuplicateToPersonal ? <label className="form-toggle-row ui-switch ui-switch-compact"><span>{TXT.duplicateToPersonal}</span><input type="checkbox" role="switch" checked={duplicateExpenseToPersonal} onChange={(event) => setDuplicateExpenseToPersonal(event.target.checked)} /></label> : null}<button className="button button-primary" type="submit" disabled={isAddingExpense}>{isAddingExpense ? TXT.loading : TXT.save}</button>
             </form>
           </article>
         </div>
@@ -1587,14 +1624,14 @@ export default function Home() {
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={currencyModalMode === "income" ? TXT.addCurrency : TXT.spendCurrency} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h2>{currencyModalMode === "income" ? TXT.addCurrency : TXT.spendCurrency}</h2>
-              <button className="modal-close" type="button" aria-label="\u0417\u0430\u043a\u0440\u0438\u0442\u0438" onClick={() => setIsCurrencyIncomeModalOpen(false)}>{"\u00d7"}</button>
+              <button className="modal-close" type="button" aria-label={TXT.close} onClick={() => setIsCurrencyIncomeModalOpen(false)}><X size={18} /></button>
             </div>
             <form className="income-form" onSubmit={currencyModalMode === "income" ? handleAddCurrencyIncome : handleAddCurrencyExpense}>
               <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={currencyIncomeForm.name} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
               <label>{TXT.currency}<select value={currencyIncomeForm.currency} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, currency: event.target.value as CurrencyCode }))}>{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
               <label>{TXT.amount}<input type="number" min="0.01" step="0.01" placeholder="0" value={currencyIncomeForm.amount} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
               <label>{TXT.date}<input type="date" value={currencyIncomeForm.date} onChange={(event) => setCurrencyIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
-              <button className="button button-primary" type="submit">{TXT.save}</button>
+              {canDuplicateToPersonal ? <label className="form-toggle-row ui-switch ui-switch-compact"><span>{TXT.duplicateToPersonal}</span><input type="checkbox" role="switch" checked={duplicateCurrencyToPersonal} onChange={(event) => setDuplicateCurrencyToPersonal(event.target.checked)} /></label> : null}<button className="button button-primary" type="submit">{TXT.save}</button>
             </form>
           </article>
         </div>
@@ -1605,7 +1642,7 @@ export default function Home() {
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h2>{TXT.edit}</h2>
-              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingExpenseId(null)}>×</button>
+              <button className="modal-close" type="button" aria-label={TXT.close} onClick={() => setEditingExpenseId(null)}><X size={18} /></button>
             </div>
             <form className="expense-form" onSubmit={handleUpdateExpense}>
               <label>{TXT.name}<input type="text" placeholder={TXT.namePlaceholder} value={editExpenseForm.name} onChange={(event) => setEditExpenseForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
@@ -1624,7 +1661,7 @@ export default function Home() {
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h2>{TXT.edit}</h2>
-              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingCurrencyIncomeId(null)}>×</button>
+              <button className="modal-close" type="button" aria-label={TXT.close} onClick={() => setEditingCurrencyIncomeId(null)}><X size={18} /></button>
             </div>
             <form className="income-form" onSubmit={handleUpdateCurrencyIncome}>
               <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={editCurrencyIncomeForm.name} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
@@ -1641,7 +1678,7 @@ export default function Home() {
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
             <div className="modal-head">
               <h2>{TXT.edit}</h2>
-              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingIncomeId(null)}>×</button>
+              <button className="modal-close" type="button" aria-label={TXT.close} onClick={() => setEditingIncomeId(null)}><X size={18} /></button>
             </div>
             <form className="income-form" onSubmit={handleUpdateIncome}>
               <label>{TXT.name}<input type="text" placeholder={TXT.incomeNamePlaceholder} value={editIncomeForm.name} onChange={(event) => setEditIncomeForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
@@ -1692,5 +1729,11 @@ export default function Home() {
     </main>
   );
 }
+
+
+
+
+
+
 
 
