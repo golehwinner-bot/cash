@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { FormEvent, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
@@ -35,53 +35,53 @@ type AppNotification = {
 };
 
 const TXT = {
-  section: "РљС–РјРЅР°С‚Рё",
-  createTitle: "РЎС‚РІРѕСЂРёС‚Рё РЅРѕРІСѓ РєС–РјРЅР°С‚Сѓ",
-  roomName: "РќР°Р·РІР° РєС–РјРЅР°С‚Рё",
-  roomNamePlaceholder: "РќР°РїСЂРёРєР»Р°Рґ, Р‘СЋРґР¶РµС‚ СЂРѕРґРёРЅРё",
-  create: "РЎС‚РІРѕСЂРёС‚Рё",
-  creating: "РЎС‚РІРѕСЂСЋС”РјРѕ...",
-  loading: "Р—Р°РІР°РЅС‚Р°Р¶РµРЅРЅСЏ...",
-  emptyHouseholds: "РЈ РІР°СЃ РїРѕРєРё РЅРµРјР°С” РєС–РјРЅР°С‚. РЎС‚РІРѕСЂС–С‚СЊ РїРµСЂС€Сѓ РєС–РјРЅР°С‚Сѓ РІРёС‰Рµ.",
-  emptyMembers: "РЈ С†С–Р№ РєС–РјРЅР°С‚С– РїРѕРєРё РЅРµРјР°С” СѓС‡Р°СЃРЅРёРєС–РІ.",
-  membersTitle: "РЈС‡Р°СЃРЅРёРєРё",
-  role_OWNER: "Р’Р»Р°СЃРЅРёРє",
-  role_ADMIN: "РђРґРјС–РЅС–СЃС‚СЂР°С‚РѕСЂ",
-  role_MEMBER: "РЈС‡Р°СЃРЅРёРє",
-  myRole: "РњРѕСЏ СЂРѕР»СЊ",
-  createError: "РќРµ РІРґР°Р»РѕСЃСЏ СЃС‚РІРѕСЂРёС‚Рё РєС–РјРЅР°С‚Сѓ.",
-  inviteTitle: "РљРѕРґ Р·Р°РїСЂРѕС€РµРЅРЅСЏ",
-  inviteRole: "Р РѕР»СЊ РґР»СЏ РЅРѕРІРѕРіРѕ СѓС‡Р°СЃРЅРёРєР°",
-  generateCode: "Р—РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ",
-  generatingCode: "Р“РµРЅРµСЂСѓС”РјРѕ...",
-  clearCode: "РЎРєР°СЃСѓРІР°С‚Рё РєРѕРґ",
-  clearingCode: "РЎРєР°СЃРѕРІСѓС”РјРѕ...",
-  code: "РљРѕРґ",
-  expiresAt: "Р”С–Р№СЃРЅРёР№ РґРѕ",
-  joinTitle: "РџСЂРёС”РґРЅР°С‚РёСЃСЊ РїРѕ РєРѕРґСѓ",
-  joinCodeLabel: "6-Р·РЅР°С‡РЅРёР№ РєРѕРґ",
+  section: "\u041a\u0456\u043c\u043d\u0430\u0442\u0438",
+  createTitle: "\u0421\u0442\u0432\u043e\u0440\u0438\u0442\u0438 \u043d\u043e\u0432\u0443 \u043a\u0456\u043c\u043d\u0430\u0442\u0443",
+  roomName: "\u041d\u0430\u0437\u0432\u0430 \u043a\u0456\u043c\u043d\u0430\u0442\u0438",
+  roomNamePlaceholder: "\u041d\u0430\u043f\u0440\u0438\u043a\u043b\u0430\u0434, \u0411\u044e\u0434\u0436\u0435\u0442 \u0440\u043e\u0434\u0438\u043d\u0438",
+  create: "\u0421\u0442\u0432\u043e\u0440\u0438\u0442\u0438",
+  creating: "\u0421\u0442\u0432\u043e\u0440\u044e\u0454\u043c\u043e...",
+  loading: "\u0417\u0430\u0432\u0430\u043d\u0442\u0430\u0436\u0435\u043d\u043d\u044f...",
+  emptyHouseholds: "\u0423 \u0432\u0430\u0441 \u043f\u043e\u043a\u0438 \u043d\u0435\u043c\u0430\u0454 \u043a\u0456\u043c\u043d\u0430\u0442. \u0421\u0442\u0432\u043e\u0440\u0456\u0442\u044c \u043f\u0435\u0440\u0448\u0443 \u043a\u0456\u043c\u043d\u0430\u0442\u0443 \u0432\u0438\u0449\u0435.",
+  emptyMembers: "\u0423 \u0446\u0456\u0439 \u043a\u0456\u043c\u043d\u0430\u0442\u0456 \u043f\u043e\u043a\u0438 \u043d\u0435\u043c\u0430\u0454 \u0443\u0447\u0430\u0441\u043d\u0438\u043a\u0456\u0432.",
+  membersTitle: "\u0423\u0447\u0430\u0441\u043d\u0438\u043a\u0438",
+  role_OWNER: "\u0412\u043b\u0430\u0441\u043d\u0438\u043a",
+  role_ADMIN: "\u0410\u0434\u043c\u0456\u043d\u0456\u0441\u0442\u0440\u0430\u0442\u043e\u0440",
+  role_MEMBER: "\u0423\u0447\u0430\u0441\u043d\u0438\u043a",
+  myRole: "\u041c\u043e\u044f \u0440\u043e\u043b\u044c",
+  createError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0441\u0442\u0432\u043e\u0440\u0438\u0442\u0438 \u043a\u0456\u043c\u043d\u0430\u0442\u0443.",
+  inviteTitle: "\u041a\u043e\u0434 \u0437\u0430\u043f\u0440\u043e\u0448\u0435\u043d\u043d\u044f",
+  inviteRole: "\u0420\u043e\u043b\u044c \u0434\u043b\u044f \u043d\u043e\u0432\u043e\u0433\u043e \u0443\u0447\u0430\u0441\u043d\u0438\u043a\u0430",
+  generateCode: "\u0417\u0433\u0435\u043d\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434",
+  generatingCode: "\u0413\u0435\u043d\u0435\u0440\u0443\u0454\u043c\u043e...",
+  clearCode: "\u0421\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434",
+  clearingCode: "\u0421\u043a\u0430\u0441\u043e\u0432\u0443\u0454\u043c\u043e...",
+  code: "\u041a\u043e\u0434",
+  expiresAt: "\u0414\u0456\u0439\u0441\u043d\u0438\u0439 \u0434\u043e",
+  joinTitle: "\u041f\u0440\u0438\u0454\u0434\u043d\u0430\u0442\u0438\u0441\u044c \u043f\u043e \u043a\u043e\u0434\u0443",
+  joinCodeLabel: "6-\u0437\u043d\u0430\u0447\u043d\u0438\u0439 \u043a\u043e\u0434",
   joinCodePlaceholder: "123456",
-  join: "РџСЂРёС”РґРЅР°С‚РёСЃСЊ",
-  joining: "РџСЂРёС”РґРЅСѓС”РјРѕСЃСЊ...",
-  joinSuccess: "РЈСЃРїС–С€РЅРѕ РїСЂРёС”РґРЅР°РЅРѕ РґРѕ РєС–РјРЅР°С‚Рё.",
-  joinError: "РќРµ РІРґР°Р»РѕСЃСЏ РїСЂРёС”РґРЅР°С‚РёСЃСЊ РїРѕ РєРѕРґСѓ.",
-  notifications: "РЎРїРѕРІС–С‰РµРЅРЅСЏ",
-  noNotifications: "РџРѕРєРё С‰Рѕ РЅРµРјР°С” СЃРїРѕРІС–С‰РµРЅСЊ.",
-  markAllRead: "РџРѕР·РЅР°С‡РёС‚Рё РІСЃС– РїСЂРѕС‡РёС‚Р°РЅРёРјРё",
-  rename: "Р РµРґР°РіСѓРІР°С‚Рё РЅР°Р·РІСѓ",
-  saveName: "Р—Р±РµСЂРµРіС‚Рё РЅР°Р·РІСѓ",
-  cancel: "РЎРєР°СЃСѓРІР°С‚Рё",
-  deleteRoom: "Р’РёРґР°Р»РёС‚Рё РєС–РјРЅР°С‚Сѓ",
-  deletingRoom: "Р’РёРґР°Р»СЏС”РјРѕ...",
-  deleteConfirm: "Р’РёРґР°Р»РёС‚Рё РєС–РјРЅР°С‚Сѓ? РЈС‡Р°СЃРЅРёРєРё РѕС‚СЂРёРјР°СЋС‚СЊ СЃРїРѕРІС–С‰РµРЅРЅСЏ.",
-  ownerOnly: "Р›РёС€Рµ РІР»Р°СЃРЅРёРє РјРѕР¶Рµ СЂРµРґР°РіСѓРІР°С‚Рё Р°Р±Рѕ РІРёРґР°Р»СЏС‚Рё РєС–РјРЅР°С‚Сѓ.",
-  renameError: "РќРµ РІРґР°Р»РѕСЃСЏ Р·РјС–РЅРёС‚Рё РЅР°Р·РІСѓ РєС–РјРЅР°С‚Рё.",
-  deleteError: "РќРµ РІРґР°Р»РѕСЃСЏ РІРёРґР°Р»РёС‚Рё РєС–РјРЅР°С‚Сѓ.",
-  removeMember: "Р’РёРґР°Р»РёС‚Рё",
-  leaveRoom: "Р’РёР№С‚Рё",
-  removingMember: "Р’РёРґР°Р»СЏС”РјРѕ...",
-  removeMemberError: "РќРµ РІРґР°Р»РѕСЃСЏ РІРёРґР°Р»РёС‚Рё СѓС‡Р°СЃРЅРёРєР°.",
-  leaveRoomConfirm: "Р’РёР№С‚Рё Р· РєС–РјРЅР°С‚Рё?",
+  join: "\u041f\u0440\u0438\u0454\u0434\u043d\u0430\u0442\u0438\u0441\u044c",
+  joining: "\u041f\u0440\u0438\u0454\u0434\u043d\u0443\u0454\u043c\u043e\u0441\u044c...",
+  joinSuccess: "\u0423\u0441\u043f\u0456\u0448\u043d\u043e \u043f\u0440\u0438\u0454\u0434\u043d\u0430\u043d\u043e \u0434\u043e \u043a\u0456\u043c\u043d\u0430\u0442\u0438.",
+  joinError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u043f\u0440\u0438\u0454\u0434\u043d\u0430\u0442\u0438\u0441\u044c \u043f\u043e \u043a\u043e\u0434\u0443.",
+  notifications: "\u0421\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f",
+  noNotifications: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u044c.",
+  markAllRead: "\u041f\u043e\u0437\u043d\u0430\u0447\u0438\u0442\u0438 \u0432\u0441\u0456 \u043f\u0440\u043e\u0447\u0438\u0442\u0430\u043d\u0438\u043c\u0438",
+  rename: "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043d\u0430\u0437\u0432\u0443",
+  saveName: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043d\u0430\u0437\u0432\u0443",
+  cancel: "\u0421\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438",
+  deleteRoom: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438 \u043a\u0456\u043c\u043d\u0430\u0442\u0443",
+  deletingRoom: "\u0412\u0438\u0434\u0430\u043b\u044f\u0454\u043c\u043e...",
+  deleteConfirm: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438 \u043a\u0456\u043c\u043d\u0430\u0442\u0443? \u0423\u0447\u0430\u0441\u043d\u0438\u043a\u0438 \u043e\u0442\u0440\u0438\u043c\u0430\u044e\u0442\u044c \u0441\u043f\u043e\u0432\u0456\u0449\u0435\u043d\u043d\u044f.",
+  ownerOnly: "\u041b\u0438\u0448\u0435 \u0432\u043b\u0430\u0441\u043d\u0438\u043a \u043c\u043e\u0436\u0435 \u0440\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0430\u0431\u043e \u0432\u0438\u0434\u0430\u043b\u044f\u0442\u0438 \u043a\u0456\u043c\u043d\u0430\u0442\u0443.",
+  renameError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u043c\u0456\u043d\u0438\u0442\u0438 \u043d\u0430\u0437\u0432\u0443 \u043a\u0456\u043c\u043d\u0430\u0442\u0438.",
+  deleteError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0432\u0438\u0434\u0430\u043b\u0438\u0442\u0438 \u043a\u0456\u043c\u043d\u0430\u0442\u0443.",
+  removeMember: "\u0412\u0438\u0434\u0430\u043b\u0438\u0442\u0438",
+  leaveRoom: "\u0412\u0438\u0439\u0442\u0438",
+  removingMember: "\u0412\u0438\u0434\u0430\u043b\u044f\u0454\u043c\u043e...",
+  removeMemberError: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0432\u0438\u0434\u0430\u043b\u0438\u0442\u0438 \u0443\u0447\u0430\u0441\u043d\u0438\u043a\u0430.",
+  leaveRoomConfirm: "\u0412\u0438\u0439\u0442\u0438 \u0437 \u043a\u0456\u043c\u043d\u0430\u0442\u0438?",
 };
 
 const roleLabel = (role: Member["role"] | Household["role"] | JoinRole) => {
@@ -254,15 +254,15 @@ export function HouseholdMembersPanel() {
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: "РќРµ РІРґР°Р»РѕСЃСЏ Р·РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ." }));
-        setError(body.error || "РќРµ РІРґР°Р»РѕСЃСЏ Р·РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ.");
+        const body = await response.json().catch(() => ({ error: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0433\u0435\u043d\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434." }));
+        setError(body.error || "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0433\u0435\u043d\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434.");
         return;
       }
 
       const data = (await response.json()) as JoinCodeState;
       setJoinCodes((prev) => ({ ...prev, [householdId]: data }));
     } catch {
-      setError("РќРµ РІРґР°Р»РѕСЃСЏ Р·РіРµРЅРµСЂСѓРІР°С‚Рё РєРѕРґ.");
+      setError("\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0437\u0433\u0435\u043d\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434.");
     } finally {
       setBusyHouseholdId(null);
     }
@@ -278,14 +278,14 @@ export function HouseholdMembersPanel() {
       });
 
       if (!response.ok) {
-        const body = await response.json().catch(() => ({ error: "РќРµ РІРґР°Р»РѕСЃСЏ СЃРєР°СЃСѓРІР°С‚Рё РєРѕРґ." }));
-        setError(body.error || "РќРµ РІРґР°Р»РѕСЃСЏ СЃРєР°СЃСѓРІР°С‚Рё РєРѕРґ.");
+        const body = await response.json().catch(() => ({ error: "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0441\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434." }));
+        setError(body.error || "\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0441\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434.");
         return;
       }
 
       setJoinCodes((prev) => ({ ...prev, [householdId]: null }));
     } catch {
-      setError("РќРµ РІРґР°Р»РѕСЃСЏ СЃРєР°СЃСѓРІР°С‚Рё РєРѕРґ.");
+      setError("\u041d\u0435 \u0432\u0434\u0430\u043b\u043e\u0441\u044f \u0441\u043a\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u043a\u043e\u0434.");
     } finally {
       setBusyHouseholdId(null);
     }
@@ -298,7 +298,7 @@ export function HouseholdMembersPanel() {
     setJoinSuccess("");
 
     if (!/^\d{6}$/.test(joinCodeInput.trim())) {
-      setJoinError("РљРѕРґ РјР°С” РјС–СЃС‚РёС‚Рё 6 С†РёС„СЂ.");
+      setJoinError("\u041a\u043e\u0434 \u043c\u0430\u0454 \u043c\u0456\u0441\u0442\u0438\u0442\u0438 6 \u0446\u0438\u0444\u0440.");
       return;
     }
 
@@ -326,7 +326,6 @@ export function HouseholdMembersPanel() {
       setJoining(false);
     }
   };
-
   const handleRenameRoom = async (householdId: string) => {
     if (!editingName.trim()) return;
 
@@ -499,7 +498,7 @@ export function HouseholdMembersPanel() {
                     <strong>{household.name}</strong>
                     <small>{TXT.myRole}: {roleLabel(household.role)}</small>
                   </span>
-                  <span>{expanded ? "в€’" : "+"}</span>
+                  <span>{expanded ? "\u2212" : "+"}</span>
                 </button>
 
                 {expanded ? (
@@ -641,7 +640,7 @@ export function HouseholdMembersPanel() {
                           return (
                             <div className="household-member-row" key={member.id}>
                               <div>
-                                <strong>{member.name?.trim() || "РќРµРІС–РґРѕРјРёР№ РєРѕСЂРёСЃС‚СѓРІР°С‡"}</strong>
+                                <strong>{member.name?.trim() || "\u041d\u0435\u0432\u0456\u0434\u043e\u043c\u0438\u0439 \u043a\u043e\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447"}</strong>
                               </div>
                               <div className="member-row-actions">
                                 <span>{roleLabel(member.role)}</span>
