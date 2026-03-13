@@ -346,6 +346,7 @@ export default function Home() {
   const [currencyAccordionOpen, setCurrencyAccordionOpen] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
   const settingsRef = useRef<HTMLDivElement | null>(null);
+  const currencyFabRef = useRef<HTMLDivElement | null>(null);
   const settingsBootstrappedRef = useRef(false);
   const { data: session, status } = useSession();
   const currentUserName = (session?.user?.name || session?.user?.email || TXT.unknownUser).trim();
@@ -387,6 +388,23 @@ export default function Home() {
   useEffect(() => {
     if (activeTab !== "expenses") setCurrencyFabOpen(false);
   }, [activeTab]);
+
+  useEffect(() => {
+    if (!currencyFabOpen) return;
+
+    const handleCurrencyOutsideClick = (event: MouseEvent | TouchEvent) => {
+      if (currencyFabRef.current?.contains(event.target as Node)) return;
+      setCurrencyFabOpen(false);
+    };
+
+    document.addEventListener("mousedown", handleCurrencyOutsideClick);
+    document.addEventListener("touchstart", handleCurrencyOutsideClick, { passive: true });
+
+    return () => {
+      document.removeEventListener("mousedown", handleCurrencyOutsideClick);
+      document.removeEventListener("touchstart", handleCurrencyOutsideClick);
+    };
+  }, [currencyFabOpen]);
 
   useEffect(() => {
     if (!mounted || !householdsLoaded) return;
@@ -523,9 +541,24 @@ export default function Home() {
       if (!response.ok) return;
 
       const data = (await response.json()) as FinancePayload;
-      const nextExpenses = Array.isArray(data.expenses) ? data.expenses : [];
-      const nextIncomes = Array.isArray(data.incomes) ? data.incomes : [];
-      const nextCurrencyIncomes = Array.isArray(data.currencyIncomes) ? data.currencyIncomes : [];
+      const nextExpenses = Array.isArray(data.expenses)
+        ? data.expenses.map((item) => ({
+            ...item,
+            name: typeof item.name === "string" ? item.name : "",
+          }))
+        : [];
+      const nextIncomes = Array.isArray(data.incomes)
+        ? data.incomes.map((item) => ({
+            ...item,
+            name: typeof item.name === "string" ? item.name : "",
+          }))
+        : [];
+      const nextCurrencyIncomes = Array.isArray(data.currencyIncomes)
+        ? data.currencyIncomes.map((item) => ({
+            ...item,
+            name: typeof item.name === "string" && item.name.trim() ? item.name : item.currency,
+          }))
+        : [];
       const nextLimits = Array.isArray(data.limits) ? data.limits : [];
 
       setExpenses(nextExpenses);
@@ -776,7 +809,7 @@ export default function Home() {
     setEditingCurrencyIncomeId(item.id);
     setEditingCurrencyMode(item.amount < 0 ? "expense" : "income");
     setEditCurrencyIncomeForm({
-      name: item.name,
+      name: item.name || item.currency,
       currency: item.currency,
       amount: String(Math.abs(item.amount)),
       date: item.date,
@@ -1259,7 +1292,7 @@ export default function Home() {
         </div>
       ) : null}
 
-      <div className={`currency-fab-stack ${currencyFabOpen ? "open" : ""}`}>
+      <div ref={currencyFabRef} className={`currency-fab-stack ${currencyFabOpen ? "open" : ""}`}>
         <button
           className="currency-fab-option"
           type="button"
