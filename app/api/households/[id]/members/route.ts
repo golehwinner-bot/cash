@@ -197,6 +197,15 @@ export async function DELETE(request: Request, context: Params) {
   });
 
   if (target.user.id !== session.user.id) {
+    await prisma.notification.create({
+      data: {
+        userId: target.user.id,
+        type: "ROOM_DELETED",
+        title: "Room members",
+        body: `${actorName} removed you from a room`,
+      },
+    });
+
     void sendPushToUser(target.user.id, {
       title: "Room members",
       body: `${actorName} removed you from a room`,

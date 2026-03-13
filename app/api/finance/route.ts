@@ -324,12 +324,11 @@ export async function POST(request: Request) {
 
       const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
       if (scopeKey.startsWith("room:")) {
-        void notifyHouseholdExpenseCreated({
+        void notifyHouseholdMembers({
           householdId: scope.householdId,
-          amount: created.amount,
-          authorName,
           actorUserId: resolved.userId,
-          title: created.title,
+          title: "New expense",
+          body: `${authorName}: ${created.title} -${created.amount} UAH`,
         });
       }
 
