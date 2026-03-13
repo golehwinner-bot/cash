@@ -324,7 +324,7 @@ export async function POST(request: Request) {
 
       const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
       if (scopeKey.startsWith("room:")) {
-        void notifyHouseholdMembers({
+        await notifyHouseholdMembers({
           householdId: scope.householdId,
           actorUserId: resolved.userId,
           title: "New expense",
@@ -375,7 +375,7 @@ export async function POST(request: Request) {
 
       if (scopeKey.startsWith("room:")) {
         const authorName = created.createdBy.name || created.createdBy.email || "User";
-        void notifyHouseholdMembers({
+        await notifyHouseholdMembers({
           householdId: scope.householdId,
           actorUserId: resolved.userId,
           title: "New income",
@@ -440,7 +440,7 @@ export async function POST(request: Request) {
         const isExpense = kind === "currency_expense";
         const operationLabel = isExpense ? "Currency spend" : "Currency top up";
         const signedAmount = isExpense ? `-${Math.abs(created.amount)}` : `+${Math.abs(created.amount)}`;
-        void notifyHouseholdMembers({
+        await notifyHouseholdMembers({
           householdId: scope.householdId,
           actorUserId: resolved.userId,
           title: operationLabel,

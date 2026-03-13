@@ -108,7 +108,7 @@ export async function POST(request: Request) {
 
     const actorName = session.user.name || session.user.email || "User";
     const roleLabel = role === "ADMIN" ? "admin" : "member";
-    void notifyRoomMembers({
+    await notifyRoomMembers({
       householdId: household.id,
       actorUserId: session.user.id,
       title: "Room members",

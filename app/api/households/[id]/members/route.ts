@@ -131,7 +131,7 @@ export async function POST(request: Request, context: Params) {
   const targetName = user.name || user.email || "User";
   const action = existing ? "updated participant role" : "added participant";
 
-  void notifyRoomMembers({
+  await notifyRoomMembers({
     householdId,
     actorUserId: session.user.id,
     title: "Room members",
@@ -189,7 +189,7 @@ export async function DELETE(request: Request, context: Params) {
   const actorName = session.user.name || session.user.email || "User";
   const targetName = target.user.name || target.user.email || "User";
 
-  void notifyRoomMembers({
+  await notifyRoomMembers({
     householdId,
     actorUserId: session.user.id,
     title: "Room members",
@@ -206,7 +206,7 @@ export async function DELETE(request: Request, context: Params) {
       },
     });
 
-    void sendPushToUser(target.user.id, {
+    await sendPushToUser(target.user.id, {
       title: "Room members",
       body: `${actorName} removed you from a room`,
       url: "/",
