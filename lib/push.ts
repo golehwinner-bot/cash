@@ -28,12 +28,18 @@ const ensurePushState = (): PushConfigState => {
     return globalForPush.__cashPushState;
   }
 
-  const generated = webpush.generateVAPIDKeys();
-  const publicKey =
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
-    process.env.VAPID_PUBLIC_KEY ||
-    generated.publicKey;
-  const privateKey = process.env.VAPID_PRIVATE_KEY || generated.privateKey;
+  const envPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || process.env.VAPID_PUBLIC_KEY || "";
+  const envPrivateKey = process.env.VAPID_PRIVATE_KEY || "";
+
+  // In production/serverless, generated keys break push delivery across instances.
+  // Keep generated fallback only for local development convenience.
+  if (process.env.NODE_ENV === "production" && (!envPublicKey || !envPrivateKey)) {
+    throw new Error("Push is not configured: set NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY.");
+  }
+
+  const generated = !envPublicKey || !envPrivateKey ? webpush.generateVAPIDKeys() : null;
+  const publicKey = envPublicKey || generated!.publicKey;
+  const privateKey = envPrivateKey || generated!.privateKey;
 
   const state: PushConfigState = {
     configured: false,
@@ -113,6 +119,11 @@ export const sendPushToUser = async (userId: string, payload: PushPayload) => {
       sent += 1;
     } catch (error) {
       const statusCode = (error as { statusCode?: number })?.statusCode;
+      console.error("Push send failed", {
+        userId,
+        statusCode,
+        endpoint: subscription.endpoint.slice(0, 64),
+      });
       if (statusCode === 404 || statusCode === 410) {
         staleEndpoints.push(subscription.endpoint);
       }

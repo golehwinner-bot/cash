@@ -24,6 +24,30 @@ const resolveCurrentUserId = async () => {
   return null;
 };
 
+const localizeLegacyNotification = (title: string, body: string) => {
+  const titleMap: Record<string, string> = {
+    "New expense": "Нова витрата",
+    "New income": "Новий дохід",
+    "Currency spend": "Списання валюти",
+    "Currency top up": "Надходження валюти",
+    "Room members": "Учасники кімнати",
+  };
+
+  let nextTitle = titleMap[title] || title;
+  let nextBody = body
+    .replaceAll(" UAH", " грн")
+    .replaceAll("joined room as", "приєднався(лася) до кімнати як")
+    .replaceAll("removed participant:", "видалив(ла) учасника:")
+    .replaceAll("removed you from a room", "видалив(ла) вас із кімнати")
+    .replaceAll("updated participant role", "змінив(ла) роль учасника")
+    .replaceAll("added participant", "додав(ла) учасника");
+
+  if (!nextTitle.trim()) nextTitle = "Сповіщення";
+  if (!nextBody.trim()) nextBody = body;
+
+  return { title: nextTitle, body: nextBody };
+};
+
 export async function GET() {
   try {
     const userId = await resolveCurrentUserId();
@@ -45,7 +69,12 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ notifications });
+    const localized = notifications.map((item) => {
+      const normalized = localizeLegacyNotification(item.title, item.body);
+      return { ...item, title: normalized.title, body: normalized.body };
+    });
+
+    return NextResponse.json({ notifications: localized });
   } catch (error) {
     return NextResponse.json(
       {

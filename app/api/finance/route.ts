@@ -327,8 +327,8 @@ export async function POST(request: Request) {
         await notifyHouseholdMembers({
           householdId: scope.householdId,
           actorUserId: resolved.userId,
-          title: "New expense",
-          body: `${authorName}: ${created.title} -${created.amount} UAH`,
+          title: "Нова витрата",
+          body: `${authorName}: ${created.title} -${created.amount} грн`,
         });
       }
 
@@ -374,12 +374,12 @@ export async function POST(request: Request) {
       });
 
       if (scopeKey.startsWith("room:")) {
-        const authorName = created.createdBy.name || created.createdBy.email || "User";
+        const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
         await notifyHouseholdMembers({
           householdId: scope.householdId,
           actorUserId: resolved.userId,
-          title: "New income",
-          body: `${authorName}: ${created.title} +${created.amount} UAH`,
+          title: "Новий дохід",
+          body: `${authorName}: ${created.title} +${created.amount} грн`,
         });
       }
 
@@ -436,9 +436,9 @@ export async function POST(request: Request) {
       });
 
       if (scopeKey.startsWith("room:")) {
-        const authorName = created.createdBy.name || created.createdBy.email || "User";
+        const authorName = created.createdBy.name || created.createdBy.email || "Невідомий користувач";
         const isExpense = kind === "currency_expense";
-        const operationLabel = isExpense ? "Currency spend" : "Currency top up";
+        const operationLabel = isExpense ? "Списання валюти" : "Надходження валюти";
         const signedAmount = isExpense ? `-${Math.abs(created.amount)}` : `+${Math.abs(created.amount)}`;
         await notifyHouseholdMembers({
           householdId: scope.householdId,

@@ -106,13 +106,13 @@ export async function POST(request: Request) {
     ]);
 
 
-    const actorName = session.user.name || session.user.email || "User";
-    const roleLabel = role === "ADMIN" ? "admin" : "member";
+    const actorName = session.user.name || session.user.email || "Невідомий користувач";
+    const roleLabel = role === "ADMIN" ? "адмін" : "учасник";
     await notifyRoomMembers({
       householdId: household.id,
       actorUserId: session.user.id,
-      title: "Room members",
-      body: `${actorName} joined room as ${roleLabel}`
+      title: "Учасники кімнати",
+      body: `${actorName} приєднався(лася) до кімнати як ${roleLabel}`
     });
     return NextResponse.json({ ok: true, householdId: household.id, role, householdName: household.name });
   } catch (error) {

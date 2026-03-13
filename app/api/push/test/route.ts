@@ -27,8 +27,8 @@ export async function POST(request: Request) {
   }
 
   const body = (await request.json().catch(() => ({}))) as { title?: string; body?: string; url?: string };
-  const title = String(body.title || "Cashflow").trim() || "Cashflow";
-  const message = String(body.body || "??????? push-??????????").trim() || "??????? push-??????????";
+  const title = String(body.title || "Сповіщення").trim() || "Сповіщення";
+  const message = String(body.body || "Тестове push-сповіщення").trim() || "Тестове push-сповіщення";
   const url = String(body.url || "/").trim() || "/";
 
   const result = await sendPushToUser(userId, { title, body: message, url });

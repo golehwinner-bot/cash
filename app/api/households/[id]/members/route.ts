@@ -127,14 +127,16 @@ export async function POST(request: Request, context: Params) {
     },
   });
 
-  const actorName = session.user.name || session.user.email || "User";
-  const targetName = user.name || user.email || "User";
-  const action = existing ? "updated participant role" : "added participant";
+  const actorName = session.user.name || session.user.email || "Невідомий користувач";
+  const targetName = user.name || user.email || "Невідомий користувач";
+  const action = existing
+    ? "змінив(ла) роль учасника"
+    : "додав(ла) учасника";
 
   await notifyRoomMembers({
     householdId,
     actorUserId: session.user.id,
-    title: "Room members",
+    title: "Учасники кімнати",
     body: `${actorName} ${action}: ${targetName}`,
   });
 
@@ -186,14 +188,14 @@ export async function DELETE(request: Request, context: Params) {
 
   await prisma.householdMember.delete({ where: { id: target.id } });
 
-  const actorName = session.user.name || session.user.email || "User";
-  const targetName = target.user.name || target.user.email || "User";
+  const actorName = session.user.name || session.user.email || "Невідомий користувач";
+  const targetName = target.user.name || target.user.email || "Невідомий користувач";
 
   await notifyRoomMembers({
     householdId,
     actorUserId: session.user.id,
-    title: "Room members",
-    body: `${actorName} removed participant: ${targetName}`,
+    title: "Учасники кімнати",
+    body: `${actorName} видалив(ла) учасника: ${targetName}`,
   });
 
   if (target.user.id !== session.user.id) {
@@ -201,14 +203,14 @@ export async function DELETE(request: Request, context: Params) {
       data: {
         userId: target.user.id,
         type: "ROOM_DELETED",
-        title: "Room members",
-        body: `${actorName} removed you from a room`,
+        title: "Учасники кімнати",
+        body: `${actorName} видалив(ла) вас із кімнати`,
       },
     });
 
     await sendPushToUser(target.user.id, {
-      title: "Room members",
-      body: `${actorName} removed you from a room`,
+      title: "Учасники кімнати",
+      body: `${actorName} видалив(ла) вас із кімнати`,
       url: "/",
     }).catch(() => ({ sent: 0 }));
   }

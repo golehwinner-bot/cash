@@ -1211,8 +1211,8 @@ export default function Home() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          title: "Cashflow",
-          body: "Push test enabled.",
+          title: "Сповіщення",
+          body: "Тестове push-сповіщення увімкнено.",
           url: "/",
         }),
       }).catch(() => undefined);
