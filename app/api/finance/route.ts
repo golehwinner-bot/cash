@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { IncomeCategory, IncomeType, ExpenseSource } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -143,10 +143,14 @@ const notifyHouseholdExpenseCreated = async (params: {
   householdId: string;
   amount: number;
   authorName: string;
+  actorUserId: string;
   title: string;
 }) => {
   const members = await prisma.householdMember.findMany({
-    where: { householdId: params.householdId },
+    where: {
+      householdId: params.householdId,
+      userId: { not: params.actorUserId },
+    },
     select: { userId: true },
   });
 
@@ -280,12 +284,15 @@ export async function POST(request: Request) {
       });
 
       const authorName = created.createdBy.name || created.createdBy.email || "Користувач";
-      void notifyHouseholdExpenseCreated({
-        householdId: scope.householdId,
-        amount: created.amount,
-        authorName,
-        title: created.title,
-      });
+      if (scopeKey.startsWith("room:")) {
+        void notifyHouseholdExpenseCreated({
+          householdId: scope.householdId,
+          amount: created.amount,
+          authorName,
+          actorUserId: resolved.userId,
+          title: created.title,
+        });
+      }
 
       return NextResponse.json(
         {
