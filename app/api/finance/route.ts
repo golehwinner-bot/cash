@@ -84,7 +84,7 @@ const ensurePersonalHousehold = async (userId: string) => {
   const created = await prisma.$transaction(async (tx) => {
     const household = await tx.household.create({
       data: {
-        name: "РћСЃРѕР±РёСЃС‚РёР№ Р±СЋРґР¶РµС‚",
+        name: "Р С›РЎРѓР С•Р В±Р С‘РЎРѓРЎвЂљР С‘Р в„– Р В±РЎР‹Р Т‘Р В¶Р ВµРЎвЂљ",
         personalOwnerId: userId,
       },
       select: { id: true },
@@ -157,8 +157,8 @@ const notifyHouseholdExpenseCreated = async (params: {
   if (members.length === 0) return;
 
   const payload = {
-    title: "Нова витрата",
-    body: `${params.authorName}: ${params.title} - ${params.amount} грн`,
+    title: "РќРѕРІР° РІРёС‚СЂР°С‚Р°",
+    body: `${params.authorName}: ${params.title} - ${params.amount} РіСЂРЅ`,
     url: "/",
   };
 
@@ -168,6 +168,34 @@ const notifyHouseholdExpenseCreated = async (params: {
     ),
   );
 };
+
+const notifyHouseholdMembers = async (params: {
+  householdId: string;
+  actorUserId: string;
+  title: string;
+  body: string;
+}) => {
+  const members = await prisma.householdMember.findMany({
+    where: {
+      householdId: params.householdId,
+      userId: { not: params.actorUserId },
+    },
+    select: { userId: true },
+  });
+
+  if (members.length === 0) return;
+
+  await Promise.all(
+    members.map((member) =>
+      sendPushToUser(member.userId, {
+        title: params.title,
+        body: params.body,
+        url: "/",
+      }).catch(() => ({ sent: 0 })),
+    ),
+  );
+};
+
 
 export async function GET(request: Request) {
   try {
@@ -283,7 +311,7 @@ export async function POST(request: Request) {
         include: { createdBy: { select: { name: true, email: true } } },
       });
 
-      const authorName = created.createdBy.name || created.createdBy.email || "Користувач";
+      const authorName = created.createdBy.name || created.createdBy.email || "РљРѕСЂРёСЃС‚СѓРІР°С‡";
       if (scopeKey.startsWith("room:")) {
         void notifyHouseholdExpenseCreated({
           householdId: scope.householdId,
@@ -334,6 +362,16 @@ export async function POST(request: Request) {
         },
         include: { createdBy: { select: { name: true, email: true } } },
       });
+
+      if (scopeKey.startsWith("room:")) {
+        const authorName = created.createdBy.name || created.createdBy.email || "User";
+        void notifyHouseholdMembers({
+          householdId: scope.householdId,
+          actorUserId: resolved.userId,
+          title: "New income",
+          body: `${authorName}: ${created.title} +${created.amount} UAH`,
+        });
+      }
 
       return NextResponse.json(
         {
@@ -386,6 +424,19 @@ export async function POST(request: Request) {
         },
         include: { createdBy: { select: { name: true, email: true } } },
       });
+
+      if (scopeKey.startsWith("room:")) {
+        const authorName = created.createdBy.name || created.createdBy.email || "User";
+        const isExpense = kind === "currency_expense";
+        const operationLabel = isExpense ? "Currency spend" : "Currency top up";
+        const signedAmount = isExpense ? `-${Math.abs(created.amount)}` : `+${Math.abs(created.amount)}`;
+        void notifyHouseholdMembers({
+          householdId: scope.householdId,
+          actorUserId: resolved.userId,
+          title: operationLabel,
+          body: `${authorName}: ${created.currency} ${signedAmount}`
+        });
+      }
 
       return NextResponse.json(
         {
@@ -456,7 +507,7 @@ export async function PATCH(request: Request) {
       });
 
       if (updated.count === 0) {
-        return NextResponse.json({ error: "Р›РёС€Рµ Р°РІС‚РѕСЂ РјРѕР¶Рµ СЂРµРґР°РіСѓРІР°С‚Рё С†РµР№ Р·Р°РїРёСЃ." }, { status: 403 });
+        return NextResponse.json({ error: "Р вЂєР С‘РЎв‚¬Р Вµ Р В°Р Р†РЎвЂљР С•РЎР‚ Р СР С•Р В¶Р Вµ РЎР‚Р ВµР Т‘Р В°Р С–РЎС“Р Р†Р В°РЎвЂљР С‘ РЎвЂ Р ВµР в„– Р В·Р В°Р С—Р С‘РЎРѓ." }, { status: 403 });
       }
 
       const item = await prisma.expense.findUnique({
@@ -510,7 +561,7 @@ export async function PATCH(request: Request) {
       });
 
       if (updated.count === 0) {
-        return NextResponse.json({ error: "Р›РёС€Рµ Р°РІС‚РѕСЂ РјРѕР¶Рµ СЂРµРґР°РіСѓРІР°С‚Рё С†РµР№ Р·Р°РїРёСЃ." }, { status: 403 });
+        return NextResponse.json({ error: "Р вЂєР С‘РЎв‚¬Р Вµ Р В°Р Р†РЎвЂљР С•РЎР‚ Р СР С•Р В¶Р Вµ РЎР‚Р ВµР Т‘Р В°Р С–РЎС“Р Р†Р В°РЎвЂљР С‘ РЎвЂ Р ВµР в„– Р В·Р В°Р С—Р С‘РЎРѓ." }, { status: 403 });
       }
 
       const item = await prisma.income.findUnique({
@@ -674,7 +725,7 @@ export async function DELETE(request: Request) {
       });
 
       if (deleted.count === 0) {
-        return NextResponse.json({ error: "Р›РёС€Рµ Р°РІС‚РѕСЂ РјРѕР¶Рµ РІРёРґР°Р»РёС‚Рё С†РµР№ Р·Р°РїРёСЃ." }, { status: 403 });
+        return NextResponse.json({ error: "Р вЂєР С‘РЎв‚¬Р Вµ Р В°Р Р†РЎвЂљР С•РЎР‚ Р СР С•Р В¶Р Вµ Р Р†Р С‘Р Т‘Р В°Р В»Р С‘РЎвЂљР С‘ РЎвЂ Р ВµР в„– Р В·Р В°Р С—Р С‘РЎРѓ." }, { status: 403 });
       }
 
       return NextResponse.json({ ok: true });

@@ -1,11 +1,40 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 
 const toErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
   return "Server error";
 };
+
+const notifyRoomMembers = async (params: {
+  householdId: string;
+  actorUserId: string;
+  title: string;
+  body: string;
+}) => {
+  const members = await prisma.householdMember.findMany({
+    where: {
+      householdId: params.householdId,
+      userId: { not: params.actorUserId },
+    },
+    select: { userId: true },
+  });
+
+  if (members.length === 0) return;
+
+  await Promise.all(
+    members.map((member) =>
+      sendPushToUser(member.userId, {
+        title: params.title,
+        body: params.body,
+        url: "/",
+      }).catch(() => ({ sent: 0 })),
+    ),
+  );
+};
+
 
 export async function POST(request: Request) {
   try {
@@ -66,6 +95,15 @@ export async function POST(request: Request) {
       }),
     ]);
 
+
+    const actorName = session.user.name || session.user.email || "User";
+    const roleLabel = role === "ADMIN" ? "admin" : "member";
+    void notifyRoomMembers({
+      householdId: household.id,
+      actorUserId: session.user.id,
+      title: "Room members",
+      body: `${actorName} joined room as ${roleLabel}`
+    });
     return NextResponse.json({ ok: true, householdId: household.id, role, householdName: household.name });
   } catch (error) {
     return NextResponse.json(

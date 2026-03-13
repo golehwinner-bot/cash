@@ -1,8 +1,36 @@
 ﻿import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { sendPushToUser } from "@/lib/push";
 
 type Params = { params: Promise<{ id: string }> };
+
+const notifyRoomMembers = async (params: {
+  householdId: string;
+  actorUserId: string;
+  title: string;
+  body: string;
+}) => {
+  const members = await prisma.householdMember.findMany({
+    where: {
+      householdId: params.householdId,
+      userId: { not: params.actorUserId },
+    },
+    select: { userId: true },
+  });
+
+  if (members.length === 0) return;
+
+  await Promise.all(
+    members.map((member) =>
+      sendPushToUser(member.userId, {
+        title: params.title,
+        body: params.body,
+        url: "/",
+      }).catch(() => ({ sent: 0 })),
+    ),
+  );
+};
 
 export async function GET(_request: Request, context: Params) {
   const session = await auth();
@@ -74,6 +102,11 @@ export async function POST(request: Request, context: Params) {
     return NextResponse.json({ error: "User not found." }, { status: 404 });
   }
 
+  const existing = await prisma.householdMember.findUnique({
+    where: { userId_householdId: { userId: user.id, householdId } },
+    select: { id: true, role: true },
+  });
+
   const member = await prisma.householdMember.upsert({
     where: { userId_householdId: { userId: user.id, householdId } },
     update: { role },
@@ -84,5 +117,75 @@ export async function POST(request: Request, context: Params) {
     },
   });
 
+  const actorName = session.user.name || session.user.email || "User";
+  const targetName = user.name || user.email || "User";
+  const action = existing ? "updated participant role" : "added participant";
+
+  void notifyRoomMembers({
+    householdId,
+    actorUserId: session.user.id,
+    title: "Room members",
+    body: `${actorName} ${action}: ${targetName}`,
+  });
+
   return NextResponse.json({ id: member.id, userId: member.userId, role: member.role });
+}
+
+export async function DELETE(request: Request, context: Params) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { id: householdId } = await context.params;
+
+  const membership = await prisma.householdMember.findUnique({
+    where: { userId_householdId: { userId: session.user.id, householdId } },
+  });
+
+  if (!membership || (membership.role !== "OWNER" && membership.role !== "ADMIN")) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  const body = await request.json().catch(() => ({}));
+  const targetUserId = String(body.userId ?? "").trim();
+
+  if (!targetUserId) {
+    return NextResponse.json({ error: "Member userId is required." }, { status: 400 });
+  }
+
+  const target = await prisma.householdMember.findUnique({
+    where: { userId_householdId: { userId: targetUserId, householdId } },
+    include: { user: { select: { id: true, name: true, email: true } } },
+  });
+
+  if (!target) {
+    return NextResponse.json({ error: "Member not found." }, { status: 404 });
+  }
+
+  if (target.role === "OWNER") {
+    return NextResponse.json({ error: "Owner cannot be removed." }, { status: 400 });
+  }
+
+  await prisma.householdMember.delete({ where: { id: target.id } });
+
+  const actorName = session.user.name || session.user.email || "User";
+  const targetName = target.user.name || target.user.email || "User";
+
+  void notifyRoomMembers({
+    householdId,
+    actorUserId: session.user.id,
+    title: "Room members",
+    body: `${actorName} removed participant: ${targetName}`,
+  });
+
+  if (target.user.id !== session.user.id) {
+    void sendPushToUser(target.user.id, {
+      title: "Room members",
+      body: `${actorName} removed you from a room`,
+      url: "/",
+    }).catch(() => ({ sent: 0 }));
+  }
+
+  return NextResponse.json({ ok: true });
 }
