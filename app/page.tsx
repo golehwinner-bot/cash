@@ -168,6 +168,15 @@ const TXT = {
   spendCurrency: "\u0421\u043f\u0438\u0441\u0430\u0442\u0438 \u0432\u0430\u043b\u044e\u0442\u0443",
   notEnoughCurrency: "\u041d\u0435\u0434\u043e\u0441\u0442\u0430\u0442\u043d\u044c\u043e \u0432\u0430\u043b\u044e\u0442\u0438 \u043d\u0430 \u0440\u0430\u0445\u0443\u043d\u043a\u0443.",
   currencyExpenseSaved: "\u0412\u0438\u0442\u0440\u0430\u0442\u0443 \u0432\u0430\u043b\u044e\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u043e.",
+  expenseSaved: "\u0412\u0438\u0442\u0440\u0430\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u043e.",
+  incomeSaved: "\u0414\u043e\u0445\u0456\u0434 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043d\u043e.",
+  currencyIncomeSaved: "\u0412\u0430\u043b\u044e\u0442\u0443 \u0434\u043e\u0434\u0430\u043d\u043e.",
+  expenseUpdated: "\u0412\u0438\u0442\u0440\u0430\u0442\u0443 \u043e\u043d\u043e\u0432\u043b\u0435\u043d\u043e.",
+  incomeUpdated: "\u0414\u043e\u0445\u0456\u0434 \u043e\u043d\u043e\u0432\u043b\u0435\u043d\u043e.",
+  currencyUpdated: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0439 \u0437\u0430\u043f\u0438\u0441 \u043e\u043d\u043e\u0432\u043b\u0435\u043d\u043e.",
+  expenseDeleted: "\u0412\u0438\u0442\u0440\u0430\u0442\u0443 \u0432\u0438\u0434\u0430\u043b\u0435\u043d\u043e.",
+  incomeDeleted: "\u0414\u043e\u0445\u0456\u0434 \u0432\u0438\u0434\u0430\u043b\u0435\u043d\u043e.",
+  currencyDeleted: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0439 \u0437\u0430\u043f\u0438\u0441 \u0432\u0438\u0434\u0430\u043b\u0435\u043d\u043e.",
   currency: "\u0412\u0430\u043b\u044e\u0442\u0430",
   noCurrencyYet: "\u0412\u0430\u043b\u044e\u0442\u043d\u0438\u0445 \u043d\u0430\u0434\u0445\u043e\u0434\u0436\u0435\u043d\u044c \u043f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454.",
   noExpenses: "\u041f\u043e\u043a\u0438 \u0449\u043e \u043d\u0435\u043c\u0430\u0454 \u0432\u0438\u0442\u0440\u0430\u0442.",
@@ -467,7 +476,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!flashMessage) return;
-    const timer = window.setTimeout(() => setFlashMessage(null), 2800);
+    const timer = window.setTimeout(() => setFlashMessage(null), 1000);
     return () => window.clearTimeout(timer);
   }, [flashMessage]);
 
@@ -686,6 +695,7 @@ export default function Home() {
       setExpenses((prev) => [data.item as Expense, ...prev]);
       setExpenseForm((prev) => ({ ...prev, name: "", amount: "" }));
       setIsExpenseModalOpen(false);
+      setFlashMessage({ type: "success", text: TXT.expenseSaved });
     }
   };
 
@@ -714,6 +724,7 @@ export default function Home() {
     if (data.item) {
       setIncomes((prev) => [data.item as Income, ...prev]);
       setIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
+      setFlashMessage({ type: "success", text: TXT.incomeSaved });
     }
   };
 
@@ -769,6 +780,7 @@ export default function Home() {
     if (data.item) {
       setExpenses((prev) => prev.map((expense) => (expense.id === data.item?.id ? (data.item as Expense) : expense)));
       setEditingExpenseId(null);
+      setFlashMessage({ type: "success", text: TXT.expenseUpdated });
     }
   };
 
@@ -800,6 +812,7 @@ export default function Home() {
     if (data.item) {
       setIncomes((prev) => prev.map((income) => (income.id === data.item?.id ? (data.item as Income) : income)));
       setEditingIncomeId(null);
+      setFlashMessage({ type: "success", text: TXT.incomeUpdated });
     }
   };
 
@@ -850,6 +863,7 @@ export default function Home() {
     if (data.item) {
       setCurrencyIncomes((prev) => prev.map((row) => (row.id === data.item?.id ? (data.item as CurrencyIncome) : row)));
       setEditingCurrencyIncomeId(null);
+      setFlashMessage({ type: "success", text: TXT.currencyUpdated });
     }
   };
 
@@ -859,6 +873,7 @@ export default function Home() {
     });
     if (!response.ok) return;
     setCurrencyIncomes((prev) => prev.filter((item) => item.id !== id));
+    setFlashMessage({ type: "success", text: TXT.currencyDeleted });
   };
   const handleAddCurrencyIncome = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -885,6 +900,7 @@ export default function Home() {
       setCurrencyIncomes((prev) => [data.item as CurrencyIncome, ...prev]);
       setCurrencyIncomeForm((prev) => ({ ...prev, name: "", amount: "" }));
       setIsCurrencyIncomeModalOpen(false);
+      setFlashMessage({ type: "success", text: TXT.currencyIncomeSaved });
     }
   };
 
@@ -929,6 +945,7 @@ export default function Home() {
     });
     if (!response.ok) return;
     setExpenses((prev) => prev.filter((expense) => expense.id !== id));
+    setFlashMessage({ type: "success", text: TXT.expenseDeleted });
   };
 
   const handleDeleteIncome = async (id: string) => {
@@ -937,6 +954,7 @@ export default function Home() {
     });
     if (!response.ok) return;
     setIncomes((prev) => prev.filter((income) => income.id !== id));
+    setFlashMessage({ type: "success", text: TXT.incomeDeleted });
   };
 
   const handleCategoryLimitChange = (category: CategoryId, rawValue: string) => {
