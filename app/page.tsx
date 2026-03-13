@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSession, signOut } from "next-auth/react";
@@ -141,6 +141,7 @@ const TXT = {
   date: "\u0414\u0430\u0442\u0430",
   save: "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438",
   expensesTitle: "\u0423\u0441\u0456 \u0432\u0438\u0442\u0440\u0430\u0442\u0438",
+  currencyRecordsTitle: "\u0412\u0430\u043b\u044e\u0442\u043d\u0456 \u0437\u0430\u043f\u0438\u0441\u0438",
   filters: "\u0424\u0456\u043b\u044c\u0442\u0440\u0438",
   periodSummary: "\u041f\u0456\u0434\u0441\u0443\u043c\u043e\u043a \u0437\u0430 \u043f\u0435\u0440\u0456\u043e\u0434",
   records: "\u0437\u0430\u043f\u0438\u0441\u0456\u0432",
@@ -326,8 +327,10 @@ export default function Home() {
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [editingIncomeId, setEditingIncomeId] = useState<string | null>(null);
+  const [editingCurrencyIncomeId, setEditingCurrencyIncomeId] = useState<string | null>(null);
   const [editExpenseForm, setEditExpenseForm] = useState<ExpenseForm>(defaultExpenseForm);
   const [editIncomeForm, setEditIncomeForm] = useState<IncomeForm>(defaultIncomeForm);
+  const [editCurrencyIncomeForm, setEditCurrencyIncomeForm] = useState<CurrencyIncomeForm>(defaultCurrencyIncomeForm);
   const [householdsLoaded, setHouseholdsLoaded] = useState(false);
   const [currencyAccordionOpen, setCurrencyAccordionOpen] = useState(false);
   const expenseAmountRef = useRef<HTMLInputElement | null>(null);
@@ -403,12 +406,17 @@ export default function Home() {
   }, [settingsOpen]);
 
   useEffect(() => {
-    const isAnyModalOpen = isExpenseModalOpen || Boolean(editingExpenseId) || Boolean(editingIncomeId);
+    const isAnyModalOpen =
+      isExpenseModalOpen || Boolean(editingExpenseId) || Boolean(editingIncomeId) || Boolean(editingCurrencyIncomeId);
     if (!isAnyModalOpen) return;
 
     const previousOverflow = document.body.style.overflow;
     const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsExpenseModalOpen(false);
+      if (event.key !== "Escape") return;
+      setIsExpenseModalOpen(false);
+      setEditingExpenseId(null);
+      setEditingIncomeId(null);
+      setEditingCurrencyIncomeId(null);
     };
 
     document.body.style.overflow = "hidden";
@@ -417,7 +425,7 @@ export default function Home() {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleEscape);
     };
-  }, [isExpenseModalOpen, editingExpenseId, editingIncomeId]);
+  }, [isExpenseModalOpen, editingExpenseId, editingIncomeId, editingCurrencyIncomeId]);
 
   useEffect(() => {
     if (!session?.user) return;
@@ -736,6 +744,53 @@ export default function Home() {
     }
   };
 
+
+  const openCurrencyIncomeEditModal = (item: CurrencyIncome) => {
+    if (!currentUserId || item.createdById !== currentUserId) return;
+    setEditingCurrencyIncomeId(item.id);
+    setEditCurrencyIncomeForm({
+      currency: item.currency,
+      amount: String(item.amount),
+      date: item.date,
+    });
+  };
+
+  const handleUpdateCurrencyIncome = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editingCurrencyIncomeId) return;
+
+    const amountValue = Number(editCurrencyIncomeForm.amount);
+    if (!editCurrencyIncomeForm.currency || !editCurrencyIncomeForm.date || !amountValue || amountValue <= 0) return;
+
+    const response = await fetch("/api/finance", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        kind: "currency_income",
+        id: editingCurrencyIncomeId,
+        scopeKey: activeScopeKey,
+        currency: editCurrencyIncomeForm.currency,
+        amount: amountValue,
+        date: editCurrencyIncomeForm.date,
+      }),
+    });
+
+    if (!response.ok) return;
+
+    const data = (await response.json()) as { item?: CurrencyIncome };
+    if (data.item) {
+      setCurrencyIncomes((prev) => prev.map((row) => (row.id === data.item?.id ? (data.item as CurrencyIncome) : row)));
+      setEditingCurrencyIncomeId(null);
+    }
+  };
+
+  const handleDeleteCurrencyIncome = async (id: string) => {
+    const response = await fetch(`/api/finance?kind=currency_income&id=${encodeURIComponent(id)}&scopeKey=${encodeURIComponent(activeScopeKey)}`, {
+      method: "DELETE",
+    });
+    if (!response.ok) return;
+    setCurrencyIncomes((prev) => prev.filter((item) => item.id !== id));
+  };
   const handleAddCurrencyIncome = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const amountValue = Number(currencyIncomeForm.amount);
@@ -947,6 +1002,18 @@ export default function Home() {
           </article>
 
           <article className="card">
+            <p className="section-label">{TXT.currencyRecordsTitle}</p>
+            {currencyIncomes.length === 0 ? <p className="empty-line">{TXT.noCurrencyYet}</p> : (
+              <div className="income-table expense-table-scroll">
+                {currencyIncomes.map((item) => (
+                  <div className="income-row" key={item.id}>
+                    <div className="entry-top"><strong className="entry-title"><span>{item.currency}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className="entry-amount entry-amount-income">+{formatByCode(item.amount, item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{item.createdById === currentUserId ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article>
+          <article className="card">
             <p className="section-label">{TXT.categoryLimits}</p>
             <div className="budget-list">
               {limitsByCategory.map((budget) => (
@@ -1063,6 +1130,22 @@ export default function Home() {
         </div>
       ) : null}
 
+      {editingCurrencyIncomeId ? (
+        <div className="modal-backdrop" onClick={() => setEditingCurrencyIncomeId(null)}>
+          <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
+            <div className="modal-head">
+              <h2>{TXT.edit}</h2>
+              <button className="modal-close" type="button" aria-label="Закрити" onClick={() => setEditingCurrencyIncomeId(null)}>×</button>
+            </div>
+            <form className="income-form" onSubmit={handleUpdateCurrencyIncome}>
+              <label>{TXT.currency}<select value={editCurrencyIncomeForm.currency} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, currency: event.target.value as CurrencyCode }))}>{currencyOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label>
+              <label>{TXT.amount}<input type="number" min="0.01" step="0.01" placeholder="0" value={editCurrencyIncomeForm.amount} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, amount: event.target.value }))} required /></label>
+              <label>{TXT.date}<input type="date" value={editCurrencyIncomeForm.date} onChange={(event) => setEditCurrencyIncomeForm((prev) => ({ ...prev, date: event.target.value }))} required /></label>
+              <button className="button button-primary" type="submit">{TXT.save}</button>
+            </form>
+          </article>
+        </div>
+      ) : null}
       {editingIncomeId ? (
         <div className="modal-backdrop" onClick={() => setEditingIncomeId(null)}>
           <article className="card modal-card" role="dialog" aria-modal="true" aria-label={TXT.edit} onClick={(event) => event.stopPropagation()}>
@@ -1089,37 +1172,3 @@ export default function Home() {
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

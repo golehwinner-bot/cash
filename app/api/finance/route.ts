@@ -1,4 +1,4 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { IncomeCategory, IncomeType, ExpenseSource } from "@prisma/client";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
@@ -477,6 +477,54 @@ export async function PATCH(request: Request) {
       });
     }
 
+
+    if (kind === "currency_income") {
+      const id = String(body.id ?? "").trim();
+      const currency = String(body.currency ?? "").trim().toUpperCase();
+      const amount = Number(body.amount ?? 0);
+      const date = String(body.date ?? "");
+
+      if (!id || !currency || !date || !Number.isFinite(amount) || amount <= 0) {
+        return NextResponse.json({ error: "Invalid currency income payload." }, { status: 400 });
+      }
+
+      const updated = await prisma.currencyIncome.updateMany({
+        where: {
+          id,
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+        data: {
+          currency,
+          amount,
+          date: new Date(date),
+        },
+      });
+
+      if (updated.count === 0) {
+        return NextResponse.json({ error: "Лише автор може редагувати цей запис." }, { status: 403 });
+      }
+
+      const item = await prisma.currencyIncome.findUnique({
+        where: { id },
+        include: { createdBy: { select: { name: true, email: true } } },
+      });
+
+      if (!item) {
+        return NextResponse.json({ error: "Record not found." }, { status: 404 });
+      }
+
+      return NextResponse.json({
+        item: {
+          id: item.id,
+          currency: item.currency,
+          amount: item.amount,
+          date: formatDateIso(item.date),
+          createdById: item.createdById,
+          createdByName: item.createdBy.name || item.createdBy.email || undefined,
+        },
+      });
+    }
     const category = String(body.category ?? "").trim();
     const limit = Number(body.limit ?? 0);
 
@@ -523,7 +571,7 @@ export async function DELETE(request: Request) {
     const kind = searchParams.get("kind") ?? "";
     const id = searchParams.get("id") ?? "";
 
-    if (!id || (kind !== "expense" && kind !== "income")) {
+    if (!id || (kind !== "expense" && kind !== "income" && kind !== "currency_income")) {
       return NextResponse.json({ error: "Invalid delete payload." }, { status: 400 });
     }
 
@@ -532,6 +580,22 @@ export async function DELETE(request: Request) {
 
     if (kind === "expense") {
       await prisma.expense.deleteMany({ where: { id, householdId: scope.householdId } });
+      return NextResponse.json({ ok: true });
+    }
+
+    if (kind === "currency_income") {
+      const deleted = await prisma.currencyIncome.deleteMany({
+        where: {
+          id,
+          householdId: scope.householdId,
+          createdById: resolved.userId,
+        },
+      });
+
+      if (deleted.count === 0) {
+        return NextResponse.json({ error: "Лише автор може видалити цей запис." }, { status: 403 });
+      }
+
       return NextResponse.json({ ok: true });
     }
 
@@ -549,7 +613,3 @@ export async function DELETE(request: Request) {
     );
   }
 }
-
-
-
-
