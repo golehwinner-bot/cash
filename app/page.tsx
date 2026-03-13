@@ -107,6 +107,7 @@ type CurrencyIncomeForm = {
 };
 type ExpenseFilters = {
   category: FilterCategoryId;
+  author: string;
   dateFrom: string;
   dateTo: string;
 };
@@ -161,6 +162,7 @@ const TXT = {
   periodSummary: "\u041f\u0456\u0434\u0441\u0443\u043c\u043e\u043a \u0437\u0430 \u043f\u0435\u0440\u0456\u043e\u0434",
   records: "\u0437\u0430\u043f\u0438\u0441\u0456\u0432",
   allCategories: "\u0423\u0441\u0456 \u043a\u0430\u0442\u0435\u0433\u043e\u0440\u0456\u0457",
+  allAuthors: "\u0423\u0441\u0456 \u0430\u0432\u0442\u043e\u0440\u0438",
   dateFrom: "\u0412\u0456\u0434",
   dateTo: "\u0414\u043e",
   clearFilters: "\u0421\u043a\u0438\u043d\u0443\u0442\u0438 \u0444\u0456\u043b\u044c\u0442\u0440\u0438",
@@ -341,7 +343,7 @@ const initialCurrencyIncomes: CurrencyIncome[] = [];
 const defaultExpenseForm = (): ExpenseForm => ({ name: "", category: categories[0].id, source: expenseSources[0].id, amount: "", date: "" });
 const defaultIncomeForm = (): IncomeForm => ({ name: "", type: incomeTypes[0].id, category: incomeCategories[0].id, amount: "", date: "" });
 const defaultCurrencyIncomeForm = (): CurrencyIncomeForm => ({ name: "", currency: currencyOptions[0].id, amount: "", date: "" });
-const defaultFilters = (): ExpenseFilters => ({ category: "all", dateFrom: "", dateTo: "" });
+const defaultFilters = (): ExpenseFilters => ({ category: "all", author: "all", dateFrom: "", dateTo: "" });
 
 const currency = new Intl.NumberFormat("uk-UA", {
   style: "currency",
@@ -756,12 +758,23 @@ export default function Home() {
     return `${output} ${code}`;
   };
 
+  const expenseAuthorOptions = useMemo(() => {
+    const authors = new Map<string, string>();
+    for (const expense of expenses) {
+      if (!expense.createdById) continue;
+      authors.set(expense.createdById, expense.createdByName || TXT.unknownUser);
+    }
+
+    return [{ id: "all", label: TXT.allAuthors }, ...Array.from(authors.entries()).map(([id, label]) => ({ id, label }))];
+  }, [expenses]);
+
   const filteredExpenses = useMemo(
     () => expenses.filter((expense) => {
       const categoryPass = filters.category === "all" || expense.category === filters.category;
+      const authorPass = filters.author === "all" || expense.createdById === filters.author;
       const fromPass = !filters.dateFrom || expense.date >= filters.dateFrom;
       const toPass = !filters.dateTo || expense.date <= filters.dateTo;
-      return categoryPass && fromPass && toPass;
+      return categoryPass && authorPass && fromPass && toPass;
     }),
     [expenses, filters],
   );
@@ -1465,18 +1478,7 @@ export default function Home() {
             )}
           </article>
 
-          <article className="card">
-            <p className="section-label">{TXT.currencyRecordsTitle}</p>
-            {currencyIncomes.length === 0 ? <p className="empty-line">{TXT.noCurrencyYet}</p> : (
-              <div className="income-table expense-table-scroll">
-                {currencyIncomes.map((item) => (
-                  <div className="income-row" key={item.id}>
-                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{canDeleteRecord(item.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
+          
           <article className="card">
             <p className="section-label">{TXT.categoryLimits}</p>
             <div className="budget-list">
@@ -1502,6 +1504,7 @@ export default function Home() {
               <p className="section-label">{TXT.filters}</p>
               <div className="filters-grid">
                 <label>{TXT.category}<select value={filters.category} onChange={(event) => setFilters((prev) => ({ ...prev, category: event.target.value as FilterCategoryId }))}><option value="all">{TXT.allCategories}</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label>
+                <label>{TXT.author}<select value={filters.author} onChange={(event) => setFilters((prev) => ({ ...prev, author: event.target.value }))}>{expenseAuthorOptions.map((author) => <option key={author.id} value={author.id}>{author.label}</option>)}</select></label>
                 <label>{TXT.dateFrom}<input type="date" value={filters.dateFrom} onChange={(event) => setFilters((prev) => ({ ...prev, dateFrom: event.target.value }))} /></label>
                 <label>{TXT.dateTo}<input type="date" value={filters.dateTo} onChange={(event) => setFilters((prev) => ({ ...prev, dateTo: event.target.value }))} /></label>
               </div>
@@ -1538,7 +1541,20 @@ export default function Home() {
               </div>
             )}
           </article>
-        </section>
+        
+
+          <article className="card">
+            <p className="section-label">{TXT.currencyRecordsTitle}</p>
+            {currencyIncomes.length === 0 ? <p className="empty-line">{TXT.noCurrencyYet}</p> : (
+              <div className="income-table expense-table-scroll">
+                {currencyIncomes.map((item) => (
+                  <div className="income-row" key={item.id}>
+                    <div className="entry-top"><strong className={`entry-title ${item.name.trim().length > 18 ? "entry-title-marquee" : ""}`}><span>{item.name}</span></strong><span className="entry-date">{mounted ? formatDate(item.date) : item.date}</span></div><p className="entry-meta">{item.currency} | {TXT.author}: {item.createdByName || TXT.unknownUser}</p><div className="entry-bottom"><strong className={`entry-amount ${item.amount >= 0 ? "entry-amount-income" : ""}`}>{item.amount >= 0 ? "+" : "-"}{formatByCode(Math.abs(item.amount), item.currency)}</strong><div className="entry-actions">{item.createdById === currentUserId ? <button className="row-action row-action-warning row-action-compact" type="button" onClick={() => openCurrencyIncomeEditModal(item)}>{TXT.edit}</button> : null}{canDeleteRecord(item.createdById) ? <button className="row-action row-action-danger row-action-compact" type="button" onClick={() => handleDeleteCurrencyIncome(item.id)}>{TXT.delete}</button> : null}</div></div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </article></section>
       ) : null}
 
       {activeTab === "room" ? (
