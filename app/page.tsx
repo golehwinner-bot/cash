@@ -1078,6 +1078,15 @@ export default function Home() {
       });
 
       if (!subscribeResponse.ok) throw new Error("Failed to save subscription");
+      await fetch("/api/push/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: "Cashflow",
+          body: "Push test enabled.",
+          url: "/",
+        }),
+      }).catch(() => undefined);
       setPushEnabled(true);
       setFlashMessage({ type: "success", text: TXT.pushSubscribed });
     } catch {
@@ -1108,33 +1117,6 @@ export default function Home() {
       }
       setPushEnabled(false);
       setFlashMessage({ type: "success", text: TXT.pushDisabled });
-    } catch {
-      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
-    } finally {
-      setPushBusy(false);
-    }
-  };
-
-  const sendTestPush = async () => {
-    if (!pushSupported) {
-      setFlashMessage({ type: "error", text: TXT.pushNotSupported });
-      return;
-    }
-
-    setPushBusy(true);
-    try {
-      const response = await fetch("/api/push/test", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: "Cashflow",
-          body: "??????? push-?????????? ??????",
-          url: "/",
-        }),
-      });
-
-      if (!response.ok) throw new Error("Failed to send test");
-      setFlashMessage({ type: "success", text: TXT.pushTestSent });
     } catch {
       setFlashMessage({ type: "error", text: TXT.pushNotSupported });
     } finally {
@@ -1240,9 +1222,6 @@ export default function Home() {
                         />
                         <span>{pushEnabled ? TXT.pushStateOn : TXT.pushStateOff}</span>
                       </label>
-                      <button className="row-action" type="button" onClick={sendTestPush} disabled={pushBusy || !pushEnabled}>
-                        {pushBusy ? TXT.loading : TXT.pushTest}
-                      </button>
                     </div>
                     {!pushSupported ? <p className="settings-label">{TXT.pushNotSupported}</p> : null}
                   </div>
